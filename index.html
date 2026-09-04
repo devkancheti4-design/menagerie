@@ -982,11 +982,16 @@ const PROVIDERS = {
 "# Or let any origin in:\nOLLAMA_ORIGINS='*' ollama serve\n```\n\n" +
 "Everything else on this page is real: click the animal for its signature move, " +
 "watch it sleep when you leave it alone, and see it dance when a reply lands.";
-      for (const ch of reply){
+      /* emitted in token-sized pieces rather than characters, both because
+         that is what a real stream looks like and because a backgrounded
+         tab throttles timers hard. */
+      const pieces = reply.match(/\s*\S+|\s+/g) || [reply];
+      for (const piece of pieces){
         if (signal && signal.aborted) return;
-        yield { t:"text", v:ch };
-        await new Promise(r => setTimeout(r, 6));
+        yield { t:"text", v:piece };
+        await new Promise(r => setTimeout(r, 18));
       }
+      yield { t:"meta", v:pieces.length + " pieces" };
       yield { t:"stop", v:"end" };
     }
   }
