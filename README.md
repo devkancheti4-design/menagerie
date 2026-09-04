@@ -14,6 +14,38 @@ Two single HTML files, no build step, no dependencies, no tracking, no account:
 
 Download either one, double-click it, and it works.
 
+## How to use it
+
+**1. Open it.** Click the link above, or download `index.html` and double-click
+it. There is nothing to install and no account.
+
+**2. Point it at a model.** Open **Settings** (the ⚙ in the top right). On first
+run it looks for Ollama, then LM Studio, and falls back to a scripted demo so the
+page works with nothing installed.
+
+| If you run | Set provider to | Base URL |
+|---|---|---|
+| `ollama serve` | Ollama | `http://localhost:11434` |
+| LM Studio, llama.cpp, vLLM, LocalAI | OpenAI-ish | `http://localhost:1234/v1` |
+| OpenRouter, OpenAI, Groq | OpenAI-ish | that service's `/v1` URL + your key |
+| Anthropic | Anthropic | `https://api.anthropic.com` + your key |
+
+Hit **List** to pull the available models, or type a model name yourself. **Test
+the connection** tells you whether it answered.
+
+**3. Ask for something.** Enter sends, Shift+Enter makes a new line. The reply
+renders in the chat and streams raw on the laptop screen at the same time.
+**Stop** ends a reply early and keeps what already arrived. **New** clears the
+conversation.
+
+**4. Play with the den.** Click the animal for its signature move — each has its
+own sound. Pick a different one from the strip, hand it a laptop or skates or a
+party hat, and leave it alone for twenty seconds to watch it fall asleep. **♪**
+in the header mutes everything; **◐** cycles light, dark, and system themes.
+
+On a narrow screen the den is behind the **Den** button.
+
+
 ## Two screens for every reply
 
 The point of the layout is that the answer arrives twice.
@@ -37,6 +69,11 @@ laptop, skates, headphones, sunglasses, a party hat, coffee, or a scarf.
 The penguin belly-slides. The dragon rears back and breathes fire. The crab
 scuttles sideways in a cloud of bubbles, the octopus wiggles all eight, the fox
 leaves speed lines, and the sloth takes a very long time to stretch.
+
+Every move has a voice, synthesised on the spot with the Web Audio API — no
+audio files to download. The shark's whoosh-and-snap, the dragon's roar over
+crackling flame, the crab's seven clicks, the sloth's long yawn, the frog's
+two-note ribbit. **♪** in the header mutes the lot, and the setting sticks.
 
 Four moods run on their own:
 
@@ -141,6 +178,9 @@ alone when you download it.
 - The markdown renderer escapes first and builds nodes second, so a model that
   emits HTML gets it shown, not run. Code fences render as code while they are
   still being streamed and before the closing fence arrives.
+- Sound is a handful of oscillators and filtered noise per move, built lazily on
+  the first click — browsers keep audio suspended until a page has been touched,
+  and clicking is how a move starts anyway.
 - Works down to a phone, where the den becomes a drawer.
 - Respects `prefers-reduced-motion` — moves resolve to a single held pose.
 
@@ -152,4 +192,8 @@ unless you widen its allowed origins.
 
 ## Licence
 
-Do what you like with it.
+[Apache License 2.0](LICENSE). Use it, change it, ship it, sell it — keep the
+notice and the licence with it, and there is an explicit patent grant.
+
+The copyright line in `LICENSE` reads `2026 devkancheti4-design`; change it to
+your legal name or company if you would rather it say that.

@@ -98,6 +98,7 @@ header.bar{
 .btn.ghost:hover{background:var(--panel-2);color:var(--ink)}
 .btn.icon{padding:7px 9px}
 .btn[disabled]{opacity:.4;pointer-events:none}
+.btn.muted{opacity:.42}
 
 /* ---------- layout ---------- */
 .split{display:flex;flex:1 1 auto;min-height:0}
@@ -258,7 +259,7 @@ aside.den{
 .scrim{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:40;display:none}
 .scrim.on{display:block}
 .sheet-panel{
-  position:fixed;top:0;right:0;bottom:0;width:min(430px,100%);z-index:41;
+  position:fixed;top:0;right:0;bottom:0;width:min(430px,100%);z-index:50;
   background:var(--panel);border-left:1px solid var(--line);
   transform:translateX(101%);transition:transform .22s ease;
   display:flex;flex-direction:column;
@@ -307,7 +308,7 @@ textarea.in{resize:vertical;min-height:74px;font-size:13px;line-height:1.5}
 @media (max-width:900px){
   .den-toggle{display:inline-flex}
   aside.den{
-    position:fixed;top:0;right:0;bottom:0;z-index:30;width:min(346px,86vw);flex-basis:auto;
+    position:fixed;top:0;right:0;bottom:0;z-index:45;width:min(346px,86vw);flex-basis:auto;
     transform:translateX(101%);transition:transform .22s ease;box-shadow:0 0 40px -8px rgba(0,0,0,.45);
   }
   aside.den.on{transform:none}
@@ -332,6 +333,7 @@ textarea.in{resize:vertical;min-height:74px;font-size:13px;line-height:1.5}
     </button>
     <button class="btn den-toggle" id="denToggle">Den</button>
     <button class="btn ghost icon" id="newBtn" title="Start a new conversation">New</button>
+    <button class="btn ghost icon" id="soundBtn" title="Sound">&#9834;</button>
     <button class="btn ghost icon" id="themeBtn" title="Switch theme">◐</button>
     <button class="btn icon" id="setBtn" title="Settings">⚙</button>
   </header>
@@ -431,7 +433,7 @@ const SPECIES = {
     "..OBSSSSSSSSBO..","...OSSSSSSSSO...","....OBBO.OBBO...","................"],
     pal:{B:[35,18,58],S:[35,16,48],L:[38,25,88],A:[38,20,70],M:[345,50,65]} },
 
-  frog: { label:"Frog", move:"hop", fx:"note", cry:"Ribbit", px:[
+  frog: { label:"Frog", move:"hop", sound:"ribbit", fx:"note", cry:"Ribbit", px:[
     "...OOO....OOO...","..OWWWO..OWWWO..","..OWEWO..OWEWO..","..OBBBOOOOBBBO..",
     "..OBBBBBBBBBBO..","..OBBBBBBBBBBO..","..OBBBBBBBBBBO..","..OBLLLLLLLLBO..",
     "..OOMMMMMMMMOO..","...OOLLLLLLOO...","....OSSSSSSO....","..OOSSSSSSSSOO..",
@@ -460,7 +462,7 @@ const SPECIES = {
     "..OBSSSSSSSSBO..","...OSSSSSSSSO...","....OBBO.OBBO...","................"],
     pal:{B:[32,35,86],S:[32,30,78],L:[35,40,94],A:[340,55,80],M:[345,60,72]} },
 
-  bear: { label:"Bear", move:"lean", fx:"star", cry:"Rumble", px:[
+  bear: { label:"Bear", move:"lean", sound:"rumble", fx:"star", cry:"Rumble", px:[
     "................","..OOO......OOO..",".OBBBOOOOOOBBBO.","..OOBBBBBBBBOO..",
     "..OBBBBBBBBBBO..","..OBEEBBBBEEBO..","..OBBBLLLLBBBO..","..OBBLLKKLLBBO..",
     "..OBBLLMMLLBBO..","...OOBBBBBBOO...","....OSSSSSSO....","..OOSSSSSSSSOO..",
@@ -761,6 +763,125 @@ function frameFor(mood, t, sp){
     if (local > 0 && local < 1) marks.push({ g: sp.fx, x: p.x, y: p.y, a: S(local * PI) });
   }
   return { pose: mv.f(u), marks };
+}
+
+/* --- the noises they make -------------------------------------------
+   Synthesised on the spot with the Web Audio API. No files, nothing to
+   download, and every voice is a few oscillators and a bit of filtered
+   noise. Browsers keep the context suspended until the page has been
+   clicked, which is fine: clicking is how a move starts.
+-------------------------------------------------------------------- */
+let actx = null, master = null, noiseBuf = null;
+let soundOn = true;
+
+function audio(){
+  if (!soundOn) return null;
+  if (!actx){
+    const Ctx = window.AudioContext || window.webkitAudioContext;
+    if (!Ctx) return null;
+    try { actx = new Ctx(); } catch (e) { return null; }
+    master = actx.createGain();
+    master.gain.value = 0.5;
+    master.connect(actx.destination);
+    const len = Math.floor(actx.sampleRate * 0.5);
+    noiseBuf = actx.createBuffer(1, len, actx.sampleRate);
+    const d = noiseBuf.getChannelData(0);
+    for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+  }
+  if (actx.state === "suspended"){
+    try { const r = actx.resume(); if (r && r.catch) r.catch(() => {}); } catch (e) {}
+  }
+  return actx;
+}
+
+/* one oscillator with an envelope, optionally gliding to another pitch */
+function tone(o){
+  const c = audio();
+  if (!c) return;
+  const t0 = c.currentTime + (o.t || 0), d = o.d || 0.2;
+  const osc = c.createOscillator(), g = c.createGain();
+  osc.type = o.type || "sine";
+  osc.frequency.setValueAtTime(o.f, t0);
+  if (o.f2) osc.frequency.exponentialRampToValueAtTime(Math.max(20, o.f2), t0 + d);
+  g.gain.setValueAtTime(0.0001, t0);
+  g.gain.linearRampToValueAtTime(o.g == null ? 0.12 : o.g, t0 + Math.min(0.02, d / 3));
+  g.gain.exponentialRampToValueAtTime(0.0001, t0 + d);
+  osc.connect(g); g.connect(master);
+  osc.start(t0); osc.stop(t0 + d + 0.03);
+}
+
+/* filtered noise - whooshes, thuds, clicks, wingbeats */
+function noise(o){
+  const c = audio();
+  if (!c) return;
+  const t0 = c.currentTime + (o.t || 0), d = o.d || 0.2;
+  const src = c.createBufferSource();
+  src.buffer = noiseBuf; src.loop = true;
+  const flt = c.createBiquadFilter();
+  flt.type = o.type || "bandpass";
+  flt.frequency.setValueAtTime(o.f, t0);
+  if (o.f2) flt.frequency.exponentialRampToValueAtTime(Math.max(20, o.f2), t0 + d);
+  flt.Q.value = o.q || 1;
+  const g = c.createGain();
+  g.gain.setValueAtTime(0.0001, t0);
+  g.gain.linearRampToValueAtTime(o.g == null ? 0.12 : o.g, t0 + Math.min(0.015, d / 3));
+  g.gain.exponentialRampToValueAtTime(0.0001, t0 + d);
+  src.connect(flt); flt.connect(g); g.connect(master);
+  src.start(t0); src.stop(t0 + d + 0.03);
+}
+
+/* One recipe per move. A species can override with its own `sound`. */
+const SFX = {
+  rise:    () => [523, 659, 784, 1047].forEach((f, i) => tone({ f:f, d:0.34, type:"triangle", g:0.10, t:i*0.085 })),
+  stomp:   () => { tone({ f:150, f2:40, d:0.34, type:"sine", g:0.24, t:0.40 });
+                   noise({ f:420, f2:70, d:0.22, type:"lowpass", g:0.20, t:0.40 }); },
+  spin:    () => { tone({ f:260, f2:1150, d:0.40, type:"triangle", g:0.10 });
+                   tone({ f:1150, f2:260, d:0.38, type:"triangle", g:0.10, t:0.42 }); },
+  lean:    () => { tone({ f:230, f2:340, d:0.16, type:"triangle", g:0.11 });
+                   tone({ f:340, f2:270, d:0.20, type:"triangle", g:0.08, t:0.18 }); },
+  crouch:  () => { tone({ f:620, f2:900, d:0.10, type:"sine", g:0.09 });
+                   noise({ f:1100, f2:3000, d:0.18, type:"highpass", g:0.13, t:0.34 }); },
+  hop:     () => { tone({ f:280, f2:720, d:0.11, type:"square", g:0.09 });
+                   tone({ f:720, f2:280, d:0.11, type:"square", g:0.09, t:0.13 });
+                   tone({ f:280, f2:720, d:0.11, type:"square", g:0.08, t:0.50 }); },
+  glitch:  () => { for (let i = 0; i < 6; i++) tone({ f:900 - i*115, d:0.05, type:"square", g:0.09, t:i*0.07 });
+                   noise({ f:1800, d:0.10, type:"bandpass", g:0.11, q:8, t:0.44 }); },
+  flap:    () => { [0, 0.14, 0.28].forEach(t => noise({ f:750, f2:280, d:0.10, type:"bandpass", g:0.15, q:1.2, t:t }));
+                   tone({ f:430, f2:392, d:0.28, type:"sine", g:0.09, t:0.34 });
+                   tone({ f:330, d:0.24, type:"sine", g:0.08, t:0.60 }); },
+  lunge:   () => { noise({ f:1900, f2:380, d:0.17, type:"highpass", g:0.17 });
+                   tone({ f:190, f2:55, d:0.12, type:"sawtooth", g:0.15, t:0.14 });
+                   noise({ f:2700, d:0.05, type:"bandpass", g:0.22, q:5, t:0.16 }); },
+  dive:    () => { noise({ f:1500, f2:220, d:0.48, type:"lowpass", g:0.16 });
+                   tone({ f:300, f2:120, d:0.30, type:"sine", g:0.08 });
+                   noise({ f:300, d:0.10, type:"lowpass", g:0.16, t:0.50 }); },
+  wiggle:  () => { for (let i = 0; i < 5; i++)
+                     tone({ f:380 + i*95, f2:880 + i*95, d:0.09, type:"sine", g:0.12, t:i*0.14 }); },
+  dash:    () => { tone({ f:300, f2:1500, d:0.15, type:"square", g:0.07 });
+                   noise({ f:900, f2:3200, d:0.22, type:"highpass", g:0.13 }); },
+  rear:    () => { tone({ f:95, f2:52, d:0.55, type:"sawtooth", g:0.17 });
+                   noise({ f:600, f2:2600, d:0.45, type:"bandpass", g:0.15, q:0.7, t:0.14 }); },
+  scuttle: () => { for (let i = 0; i < 7; i++){
+                     noise({ f:2100 + i*140, d:0.05, type:"bandpass", g:0.30, q:2.2, t:i*0.09 });
+                     tone({ f:1500 + i*90, d:0.02, type:"square", g:0.05, t:i*0.09 });
+                   } },
+  stretch: () => { tone({ f:350, f2:150, d:1.05, type:"sine", g:0.11 });
+                   tone({ f:175, f2:78, d:1.15, type:"triangle", g:0.06 }); },
+  ribbit:  () => { [0, 0.22].forEach(t => { tone({ f:150, f2:230, d:0.09, type:"sawtooth", g:0.13, t:t });
+                                            tone({ f:230, f2:140, d:0.10, type:"sawtooth", g:0.13, t:t + 0.09 }); }); },
+  rumble:  () => { tone({ f:80, f2:58, d:0.6, type:"sawtooth", g:0.16 });
+                   noise({ f:220, f2:90, d:0.5, type:"lowpass", g:0.10 }); }
+};
+
+/* the two moods that react to what the model did */
+const sfxDone = () => { tone({ f:660, d:0.12, type:"triangle", g:0.09 });
+                        tone({ f:990, d:0.22, type:"triangle", g:0.09, t:0.10 }); };
+const sfxFail = () => { tone({ f:200, f2:120, d:0.20, type:"square", g:0.10 });
+                        tone({ f:150, f2:90,  d:0.28, type:"square", g:0.09, t:0.16 }); };
+
+function playMove(sp){
+  const fn = SFX[sp.sound || sp.move];
+  if (fn) try { fn(); } catch (e) {}
 }
 
 /* ---------------------------------------------------------------------
@@ -1144,6 +1265,7 @@ function signature(){
   const sp = SPECIES[pet.species] || SPECIES.clawd;
   poke();
   setMood(sp.move);
+  playMove(sp);
   popEl.textContent = sp.cry + "!";
   popEl.classList.add("on");
   clearTimeout(signature._t);
@@ -1428,11 +1550,11 @@ async function send(){
       if (!asst.text.trim()) convo.splice(convo.indexOf(asst), 1);
     } else if (asst.error){
       screenAdd("bad", "\n// " + String(asst.error).split("\n")[0] + "\n");
-      setBase("idle"); setMood("fight");
+      setBase("idle"); setMood("fight"); if (soundOn) sfxFail();
       if (!asst.text.trim()) asst.text = "";
     } else {
       screenAdd("note", "\n// done in " + secs + "s\n");
-      setBase("idle"); setMood("happy");
+      setBase("idle"); setMood("happy"); if (soundOn) sfxDone();
     }
     const stick = atBottom();
     renderMsgs();
@@ -1701,6 +1823,21 @@ $("#newBtn").addEventListener("click", () => {
   convo = []; renderMsgs(); save(); screenIdle(); poke();
 });
 
+const SOUNDKEY = "menagerie.sound";
+function paintSound(){
+  const b = $("#soundBtn");
+  b.classList.toggle("muted", !soundOn);
+  b.title = soundOn ? "Sound on - moves make a noise" : "Sound off";
+  b.setAttribute("aria-pressed", String(soundOn));
+}
+$("#soundBtn").addEventListener("click", () => {
+  soundOn = !soundOn;
+  try { localStorage.setItem(SOUNDKEY, soundOn ? "1" : "0"); } catch (e) {}
+  paintSound();
+  if (soundOn) playMove(SPECIES[pet.species] || SPECIES.clawd);
+  toast(soundOn ? "Sound on" : "Sound off");
+});
+
 const THEMES = ["", "light", "dark"];
 $("#themeBtn").addEventListener("click", () => {
   const now = document.documentElement.dataset.theme || "";
@@ -1725,6 +1862,7 @@ function load(){
     if (t) document.documentElement.dataset.theme = t;
   } catch (e) {}
   try { apiKey = localStorage.getItem(KEYSTORE) || ""; } catch (e) {}
+  try { soundOn = localStorage.getItem(SOUNDKEY) !== "0"; } catch (e) {}
   let raw = null;
   try { raw = JSON.parse(localStorage.getItem(STORE) || "null"); } catch (e) { raw = null; }
   if (raw && typeof raw === "object"){
@@ -1758,7 +1896,7 @@ async function firstRunDetect(){
 async function boot(){
   const had = load();
   $("#logo").replaceWith(logoCanvas());
-  renderPicker(); renderProps(); renderMsgs();
+  renderPicker(); renderProps(); renderMsgs(); paintSound();
   sizeStage(); screenIdle(); grow();
   requestAnimationFrame(loop);
   if (had) await probe(); else await firstRunDetect();
