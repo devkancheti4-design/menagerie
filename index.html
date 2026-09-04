@@ -1,0 +1,1508 @@
+<!doctype html>
+<html lang="en" data-theme="">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Menagerie — cast a chat transcript with animals</title>
+<meta name="description" content="Write a chat transcript and cast it with pixel-art animals. A tiger on skates, a dinosaur with a laptop, whoever you want. One HTML file, no build step.">
+<meta name="color-scheme" content="light dark">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><rect width='16' height='16' rx='3' fill='%23e2703a'/><rect x='4' y='5' width='2' height='2' fill='%23fff'/><rect x='10' y='5' width='2' height='2' fill='%23fff'/><rect x='5' y='9' width='6' height='2' fill='%23fff'/></svg>">
+<style>
+:root{
+  --bg:#f4f0e8;
+  --bg-grid:#e2dbcd;
+  --panel:#fffdf8;
+  --panel-2:#f7f2e8;
+  --ink:#231f1a;
+  --ink-2:#5d564c;
+  --ink-3:#8c8375;
+  --line:#ded5c4;
+  --line-2:#c9bfab;
+  --accent:#c85a2a;
+  --accent-soft:#f7e4d8;
+  --accent-ink:#8a3a17;
+  --bubble:#fffdf8;
+  --bubble-self:#f6e7d9;
+  --shadow:0 1px 0 rgba(35,31,26,.05), 0 6px 18px -10px rgba(35,31,26,.35);
+  --radius:14px;
+  --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,system-ui,sans-serif;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#14120f;
+    --bg-grid:#211d18;
+    --panel:#1c1917;
+    --panel-2:#232019;
+    --ink:#f0e9dd;
+    --ink-2:#b6ac9c;
+    --ink-3:#7e7466;
+    --line:#302a23;
+    --line-2:#453d33;
+    --accent:#e8823f;
+    --accent-soft:#3a2417;
+    --accent-ink:#f3b183;
+    --bubble:#241f1b;
+    --bubble-self:#33261c;
+    --shadow:0 1px 0 rgba(0,0,0,.3), 0 10px 24px -14px rgba(0,0,0,.9);
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#14120f;
+  --bg-grid:#211d18;
+  --panel:#1c1917;
+  --panel-2:#232019;
+  --ink:#f0e9dd;
+  --ink-2:#b6ac9c;
+  --ink-3:#7e7466;
+  --line:#302a23;
+  --line-2:#453d33;
+  --accent:#e8823f;
+  --accent-soft:#3a2417;
+  --accent-ink:#f3b183;
+  --bubble:#241f1b;
+  --bubble-self:#33261c;
+  --shadow:0 1px 0 rgba(0,0,0,.3), 0 10px 24px -14px rgba(0,0,0,.9);
+}
+
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0;
+  font-family:var(--sans);
+  color:var(--ink);
+  background-color:var(--bg);
+  background-image:radial-gradient(var(--bg-grid) 1px, transparent 1px);
+  background-size:8px 8px;
+  -webkit-font-smoothing:antialiased;
+  overflow:hidden;
+}
+button,input,textarea,select{font:inherit;color:inherit}
+canvas{image-rendering:pixelated;image-rendering:crisp-edges}
+
+/* ---------- app frame ---------- */
+.app{display:flex;flex-direction:column;height:100dvh}
+
+header.bar{
+  display:flex;align-items:center;gap:10px;
+  padding:10px 14px;
+  border-bottom:1px solid var(--line);
+  background:var(--panel);
+  flex:0 0 auto;
+}
+.brand{display:flex;align-items:center;gap:9px;margin-right:auto;min-width:0}
+.brand canvas{width:32px;height:32px;flex:0 0 auto}
+.brand h1{
+  font-size:15px;margin:0;letter-spacing:.14em;text-transform:uppercase;
+  font-family:var(--mono);font-weight:600;white-space:nowrap;
+}
+.brand span{font-size:12px;color:var(--ink-3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+@media (max-width:820px){.brand span{display:none}}
+
+.btn{
+  border:1px solid var(--line-2);background:var(--panel-2);
+  padding:7px 11px;border-radius:9px;cursor:pointer;
+  font-size:12.5px;font-weight:550;line-height:1;
+  display:inline-flex;align-items:center;gap:6px;
+  transition:background .12s ease, border-color .12s ease, transform .06s ease;
+  white-space:nowrap;
+}
+.btn:hover{background:var(--accent-soft);border-color:var(--accent)}
+.btn:active{transform:translateY(1px)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn.primary:hover{filter:brightness(1.06)}
+.btn.ghost{border-color:transparent;background:transparent;color:var(--ink-2)}
+.btn.ghost:hover{background:var(--panel-2);color:var(--ink)}
+.btn.icon{padding:7px 8px}
+.btn[disabled]{opacity:.4;pointer-events:none}
+
+/* ---------- main split ---------- */
+.split{display:flex;flex:1 1 auto;min-height:0}
+
+aside.cast{
+  width:272px;flex:0 0 272px;
+  border-right:1px solid var(--line);
+  background:var(--panel);
+  display:flex;flex-direction:column;min-height:0;
+}
+.pane-head{
+  display:flex;align-items:center;gap:8px;
+  padding:12px 14px 8px;
+}
+.pane-head h2{
+  margin:0;font-size:11px;letter-spacing:.16em;text-transform:uppercase;
+  color:var(--ink-3);font-family:var(--mono);font-weight:600;margin-right:auto;
+}
+.cast-list{overflow-y:auto;padding:0 10px 10px;flex:1 1 auto}
+
+.member{
+  border:1px solid transparent;border-radius:12px;
+  padding:7px 8px;margin-bottom:3px;
+  display:flex;align-items:center;gap:10px;cursor:pointer;
+  transition:background .12s ease;
+}
+.member:hover{background:var(--panel-2)}
+.member.open{background:var(--accent-soft);border-color:var(--accent)}
+.member canvas{width:32px;height:32px;flex:0 0 auto}
+.member .who{min-width:0;flex:1 1 auto}
+.member .nm{font-size:13.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.member .sub{font-size:11px;color:var(--ink-3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-family:var(--mono)}
+.member .caret{color:var(--ink-3);font-size:11px;flex:0 0 auto}
+
+/* ---------- character editor ---------- */
+.editor{
+  border:1px solid var(--accent);border-top:none;
+  border-radius:0 0 12px 12px;
+  background:var(--panel-2);
+  margin:-4px 0 8px;padding:12px 11px 11px;
+}
+.field{margin-bottom:11px}
+.field:last-child{margin-bottom:0}
+.field label{
+  display:block;font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--ink-3);font-family:var(--mono);margin-bottom:6px;font-weight:600;
+}
+.text-in{
+  width:100%;border:1px solid var(--line-2);border-radius:8px;
+  background:var(--panel);padding:7px 9px;font-size:13.5px;
+}
+.text-in:focus{outline:2px solid var(--accent);outline-offset:-1px;border-color:var(--accent)}
+
+.species{display:grid;grid-template-columns:repeat(5,1fr);gap:4px}
+.species button{
+  border:1px solid var(--line-2);background:var(--panel);border-radius:8px;
+  padding:3px 0;cursor:pointer;display:grid;place-items:center;line-height:0;
+}
+.species button canvas{width:32px;height:32px}
+.species button:hover{border-color:var(--accent)}
+.species button[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft);box-shadow:inset 0 0 0 1px var(--accent)}
+
+.chips{display:flex;flex-wrap:wrap;gap:4px}
+.chip{
+  border:1px solid var(--line-2);background:var(--panel);
+  border-radius:999px;padding:4px 9px;font-size:11.5px;cursor:pointer;
+  font-family:var(--mono);letter-spacing:.02em;
+}
+.chip:hover{border-color:var(--accent)}
+.chip[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:#fff}
+
+input[type=range]{
+  width:100%;-webkit-appearance:none;appearance:none;background:transparent;height:18px;margin:0;
+}
+input[type=range]::-webkit-slider-runnable-track{
+  height:6px;border-radius:99px;
+  background:linear-gradient(90deg,#f5504a,#f0b429,#5ac85a,#3ba7e0,#8b5cf6,#f5504a);
+}
+input[type=range]::-webkit-slider-thumb{
+  -webkit-appearance:none;width:16px;height:16px;border-radius:50%;
+  background:var(--panel);border:2px solid var(--ink);margin-top:-5px;cursor:pointer;
+}
+input[type=range]::-moz-range-track{
+  height:6px;border-radius:99px;
+  background:linear-gradient(90deg,#f5504a,#f0b429,#5ac85a,#3ba7e0,#8b5cf6,#f5504a);
+}
+input[type=range]::-moz-range-thumb{
+  width:14px;height:14px;border-radius:50%;background:var(--panel);
+  border:2px solid var(--ink);cursor:pointer;
+}
+.editor-foot{display:flex;gap:6px;align-items:center;margin-top:12px}
+.editor-foot .btn{font-size:11.5px;padding:6px 9px}
+.editor-foot .spacer{margin-left:auto}
+.danger{color:#c0392b}
+:root[data-theme="dark"] .danger{color:#ff8a7a}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .danger{color:#ff8a7a}}
+
+/* ---------- stage ---------- */
+main.stage{flex:1 1 auto;display:flex;flex-direction:column;min-width:0;min-height:0}
+.scroll{overflow-y:auto;flex:1 1 auto;padding:22px 0 8px}
+.sheet{max-width:720px;margin:0 auto;padding:0 20px}
+
+.title-in{
+  width:100%;border:none;background:transparent;
+  font-size:26px;font-weight:700;letter-spacing:-.02em;
+  padding:0 0 4px;margin-bottom:2px;
+}
+.title-in:focus{outline:none;box-shadow:0 2px 0 var(--accent)}
+.sub-in{
+  width:100%;border:none;background:transparent;color:var(--ink-3);
+  font-size:13px;padding:0;margin-bottom:20px;
+}
+.sub-in:focus{outline:none;box-shadow:0 2px 0 var(--line-2)}
+
+.line{display:flex;gap:10px;margin-bottom:14px;position:relative;align-items:flex-end}
+.line.right{flex-direction:row-reverse}
+.line .av{width:48px;height:48px;flex:0 0 auto;border:none;background:none;padding:0;cursor:pointer;border-radius:10px}
+.line .av:hover{background:var(--accent-soft)}
+.line .av canvas{width:100%;height:100%;display:block}
+.col{min-width:0;max-width:min(78%,520px)}
+.line.right .col{margin-left:auto}
+.name{
+  font-size:11px;color:var(--ink-3);margin:0 0 3px 12px;
+  font-family:var(--mono);letter-spacing:.06em;
+}
+.line.right .name{text-align:right;margin:0 12px 3px 0}
+.bubble{
+  background:var(--bubble);border:1px solid var(--line);
+  border-radius:var(--radius);border-bottom-left-radius:4px;
+  padding:9px 13px;font-size:14.5px;line-height:1.5;
+  box-shadow:var(--shadow);white-space:pre-wrap;word-wrap:break-word;
+  min-width:34px;
+}
+.line.right .bubble{
+  background:var(--bubble-self);
+  border-bottom-left-radius:var(--radius);border-bottom-right-radius:4px;
+}
+.bubble:focus{outline:2px solid var(--accent);outline-offset:1px}
+.bubble:empty::before{content:"…";color:var(--ink-3)}
+
+.line.action{justify-content:center;margin:16px 0 18px}
+.line.action .col{max-width:560px;text-align:center}
+.line.action .bubble{
+  background:transparent;border:none;box-shadow:none;
+  color:var(--ink-3);font-style:italic;font-size:13.5px;
+  border-top:1px solid var(--line);border-bottom:1px solid var(--line);
+  border-radius:0;padding:7px 10px;
+}
+
+.tools{
+  position:absolute;top:-9px;right:0;display:flex;gap:2px;
+  opacity:0;transition:opacity .12s ease;
+  background:var(--panel);border:1px solid var(--line);
+  border-radius:8px;padding:2px;box-shadow:var(--shadow);
+}
+.line.right .tools{right:auto;left:0}
+.line:hover .tools,.line:focus-within .tools{opacity:1}
+.tools button{
+  border:none;background:transparent;cursor:pointer;color:var(--ink-3);
+  padding:3px 5px;border-radius:5px;font-size:11px;line-height:1;
+}
+.tools button:hover{background:var(--panel-2);color:var(--ink)}
+
+.empty{text-align:center;color:var(--ink-3);padding:46px 20px;font-size:13.5px;line-height:1.7}
+
+/* ---------- composer ---------- */
+.composer{
+  flex:0 0 auto;border-top:1px solid var(--line);background:var(--panel);
+  padding:10px 20px 12px;
+}
+.composer-inner{max-width:720px;margin:0 auto}
+.speakers{display:flex;gap:4px;align-items:center;margin-bottom:8px;overflow-x:auto;padding-bottom:2px}
+.spk{
+  border:1px solid transparent;background:none;padding:2px;border-radius:9px;
+  cursor:pointer;flex:0 0 auto;line-height:0;opacity:.5;
+  transition:opacity .12s ease, background .12s ease;
+}
+.spk canvas{width:32px;height:32px}
+.spk:hover{opacity:.85;background:var(--panel-2)}
+.spk[aria-pressed="true"]{opacity:1;background:var(--accent-soft);border-color:var(--accent)}
+.mode-tog{margin-left:auto;display:flex;gap:3px;flex:0 0 auto;padding-left:8px}
+.row{display:flex;gap:8px;align-items:flex-end}
+.say{
+  flex:1 1 auto;resize:none;border:1px solid var(--line-2);border-radius:11px;
+  background:var(--panel-2);padding:10px 12px;font-size:14.5px;line-height:1.45;
+  max-height:150px;min-height:42px;
+}
+.say:focus{outline:2px solid var(--accent);outline-offset:-1px;border-color:var(--accent)}
+.hint{font-size:11px;color:var(--ink-3);margin-top:6px;font-family:var(--mono)}
+
+/* ---------- toast ---------- */
+.toast{
+  position:fixed;left:50%;bottom:22px;transform:translate(-50%,14px);
+  background:var(--ink);color:var(--bg);padding:9px 15px;border-radius:99px;
+  font-size:13px;font-weight:550;opacity:0;pointer-events:none;
+  transition:opacity .2s ease, transform .2s ease;z-index:50;box-shadow:var(--shadow);
+}
+.toast.on{opacity:1;transform:translate(-50%,0)}
+
+/* ---------- mobile ---------- */
+.cast-toggle{display:none}
+@media (max-width:760px){
+  .cast-toggle{display:inline-flex}
+  aside.cast{
+    position:fixed;inset:0 auto 0 0;z-index:40;width:290px;flex-basis:290px;
+    transform:translateX(-101%);transition:transform .22s ease;
+    box-shadow:0 0 40px -8px rgba(0,0,0,.4);
+  }
+  aside.cast.open{transform:none}
+  .scrim{position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:39;display:none}
+  .scrim.on{display:block}
+  .sheet{padding:0 14px}
+  .composer{padding:8px 14px 10px}
+  .title-in{font-size:22px}
+  .col{max-width:84%}
+}
+
+/* ---------- popover menu ---------- */
+header.bar{position:relative}
+.menu{
+  position:absolute;top:48px;right:12px;z-index:60;min-width:186px;
+  background:var(--panel);border:1px solid var(--line-2);border-radius:12px;
+  box-shadow:var(--shadow);padding:5px;
+}
+.menu button{
+  display:block;width:100%;text-align:left;border:none;background:none;
+  padding:8px 10px;border-radius:8px;font-size:13px;cursor:pointer;
+}
+.menu button:hover{background:var(--panel-2)}
+.menu hr{border:none;border-top:1px solid var(--line);margin:4px 6px}
+
+@media (prefers-reduced-motion:reduce){
+  *{transition-duration:.01ms !important;animation-duration:.01ms !important}
+}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <header class="bar">
+    <div class="brand">
+      <canvas id="logo" aria-hidden="true"></canvas>
+      <h1>Menagerie</h1>
+      <span>cast a chat transcript with animals</span>
+    </div>
+    <button class="btn cast-toggle" id="castToggle">Cast</button>
+    <button class="btn" id="linkBtn" title="Copy a link that contains this whole transcript">Copy link</button>
+    <button class="btn" id="pngBtn" title="Download the transcript as an image">Export PNG</button>
+    <button class="btn ghost icon" id="menuBtn" title="More" aria-haspopup="true" aria-expanded="false">•••</button>
+    <div class="menu" id="menu" hidden>
+      <button data-do="text">Copy as plain text</button>
+      <button data-do="json">Copy as JSON</button>
+      <button data-do="import">Paste JSON…</button>
+      <hr>
+      <button data-do="theme">Switch theme</button>
+      <button data-do="demo">Load the example</button>
+      <button data-do="reset">Start an empty one</button>
+    </div>
+  </header>
+
+  <div class="split">
+    <aside class="cast" id="castPane">
+      <div class="pane-head">
+        <h2>Cast</h2>
+        <button class="btn" id="addBtn">+ Add</button>
+      </div>
+      <div class="cast-list" id="castList"></div>
+    </aside>
+    <div class="scrim" id="scrim"></div>
+
+    <main class="stage">
+      <div class="scroll" id="scroll">
+        <div class="sheet">
+          <input class="title-in" id="title" placeholder="Untitled transcript" spellcheck="false">
+          <input class="sub-in" id="subtitle" placeholder="A line about what this is">
+          <div id="lines"></div>
+        </div>
+      </div>
+      <div class="composer">
+        <div class="composer-inner">
+          <div class="speakers" id="speakers"></div>
+          <div class="row">
+            <textarea class="say" id="say" rows="1" placeholder="Say something…"></textarea>
+            <button class="btn primary" id="addLine">Add</button>
+          </div>
+          <div class="hint" id="hint">Enter to add · Shift+Enter for a new paragraph</div>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+"use strict";
+/* =====================================================================
+   Menagerie — a chat transcript you cast with pixel animals.
+   Everything below is one file: sprites, palettes, editor, exporter.
+   ===================================================================== */
+
+/* ---------------------------------------------------------------------
+   1. SPRITES
+   Each character is a 16x16 grid. One letter per pixel:
+     .  transparent      O  outline        B  body
+     S  torso/shade      L  light / belly  A  accent (stripes, hair…)
+     E  eye              W  white          M  mouth / nose / beak
+     K  near-black
+   Add a species by adding an entry here — nothing else needs to know.
+--------------------------------------------------------------------- */
+const SPECIES = {
+  clawd: { label:"Clawd", px:[
+    "....O..OO..O....",
+    "...OBOOBBOOBO...",
+    "..OOBBBBBBBBOO..",
+    ".OBBBBBBBBBBBBO.",
+    "OBBBBBBBBBBBBBBO",
+    "OBBEEBBBBBBEEBBO",
+    ".OBEEBBBBBBEEBO.",
+    "..OBBBBBBBBBBO..",
+    "..OBBLMMMMLBBO..",
+    "...OOBBBBBBOO...",
+    "....OSSSSSSO....",
+    "..OOSSSSSSSSOO..",
+    "..OBSSSSSSSSBO..",
+    "...OSSSSSSSSO...",
+    "....OBBO.OBBO...",
+    "................"],
+    pal:{B:[26,85,63],S:[24,78,53],L:[34,85,90],A:[20,80,55],M:[8,50,42]} },
+
+  dino: { label:"Dino", px:[
+    ".....O....O.....",
+    "....OAOOOOAO....",
+    "..OOBBBBBBBBOO..",
+    "..OBBBBBBBBBBO..",
+    "..OBBBBBBBBBBO..",
+    "..OBEEBBBBEEBO..",
+    "..OBEEBBBBEEBO..",
+    "..OBBLLLLLLBBO..",
+    "..OBLWWLLWWLBO..",
+    "...OOLLLLLLOO...",
+    "....OSSSSSSO....",
+    "..OOSSSSSSSSOO..",
+    "..OBSSSSSSSSBO..",
+    "...OSSSSSSSSO...",
+    "....OBBO.OBBO...",
+    "................"],
+    pal:{B:[128,45,50],S:[128,42,42],L:[80,55,75],A:[100,50,62],M:[350,50,60]} },
+
+  tiger: { label:"Tiger", px:[
+    "................",
+    "..OOO......OOO..",
+    ".OBBBOOOOOOBBBO.",
+    "..OOBBBBBBBBOO..",
+    "..OABBBBBBBBAO..",
+    "..OBEEBBBBEEBO..",
+    "..OBEEBBBBEEBO..",
+    "..OBALLLLLLABO..",
+    "..OBLLMMMMLLBO..",
+    "...OOLLLLLLOO...",
+    "....OSSSSSSO....",
+    "..OOSASSSSASOO..",
+    "..OBSSSSSSSSBO..",
+    "...OSASSSSASO...",
+    "....OBBO.OBBO...",
+    "................"],
+    pal:{B:[28,88,58],S:[28,80,50],L:[40,60,93],A:[24,25,16],M:[350,45,58]} },
+
+  human: { label:"Human", px:[
+    "................",
+    "....AAAAAAAA....",
+    "..AAAAAAAAAAAA..",
+    "..ABBBBBBBBBBA..",
+    "..ABBBBBBBBBBA..",
+    "..OBEEBBBBEEBO..",
+    "..OBBBBBBBBBBO..",
+    "..OBBBBMMBBBBO..",
+    "..OBBBLMMLBBBO..",
+    "...OOBBBBBBOO...",
+    "....OSSSSSSO....",
+    "..OOSSSSSSSSOO..",
+    "..OBSSSSSSSSBO..",
+    "...OSSSSSSSSO...",
+    "....OBBO.OBBO...",
+    "................"],
+    pal:{B:[26,55,74],S:[210,55,52],L:[26,50,84],A:[28,45,26],M:[8,45,52]},
+    hue:["S","A"] },
+
+  cat: { label:"Cat", px:[
+    "...O........O...",
+    "..OBO......OBO..",
+    ".OBBBOOOOOOBBBO.",
+    "..OOBBBBBBBBOO..",
+    "..OBBBBBBBBBBO..",
+    "..OBEEBBBBEEBO..",
+    "..OBBBLLLLBBBO..",
+    "..ABBLLMMLLBBA..",
+    "..OBBLLLLLLBBO..",
+    "...OOBBBBBBOO...",
+    "....OSSSSSSO....",
+    "..OOSSSSSSSSOO..",
+    "..OBSSSSSSSSBO..",
+    "...OSSSSSSSSO...",
+    "....OBBO.OBBO...",
+    "................"],
+    pal:{B:[35,18,58],S:[35,16,48],L:[38,25,88],A:[38,20,70],M:[345,50,65]} },
+
+  frog: { label:"Frog", px:[
+    "...OOO....OOO...",
+    "..OWWWO..OWWWO..",
+    "..OWEWO..OWEWO..",
+    "..OBBBOOOOBBBO..",
+    "..OBBBBBBBBBBO..",
+    "..OBBBBBBBBBBO..",
+    "..OBBBBBBBBBBO..",
+    "..OBLLLLLLLLBO..",
+    "..OOMMMMMMMMOO..",
+    "...OOLLLLLLOO...",
+    "....OSSSSSSO....",
+    "..OOSSSSSSSSOO..",
+    "..OBSSSSSSSSBO..",
+    "...OSSSSSSSSO...",
+    "....OBBO.OBBO...",
+    "................"],
+    pal:{B:[110,50,48],S:[110,48,40],L:[90,55,78],A:[110,45,60],M:[345,45,55]} },
+
+  robot: { label:"Robot", px:[
+    ".......AA.......",
+    ".......OO.......",
+    "..OOOOOOOOOOOO..",
+    "..OBBBBBBBBBBO..",
+    "..OBAAAAAAAABO..",
+    "..OBAEEAAEEABO..",
+    "..OBAAAAAAAABO..",
+    "..OBBBBBBBBBBO..",
+    "..OBBKKKKKKBBO..",
+    "..OOOOOOOOOOOO..",
+    "....OSSSSSSO....",
+    "..OOSSSSSSSSOO..",
+    "..OBSSSAASSSBO..",
+    "...OSSSSSSSSO...",
+    "....OBBO.OBBO...",
+    "................"],
+    pal:{B:[210,12,62],S:[210,14,50],L:[210,15,80],A:[185,80,60],M:[0,0,20]},
+    hue:["S","A"] },
+
+  owl: { label:"Owl", px:[
+    "...O........O...",
+    "..OBO......OBO..",
+    "..OBBOOOOOOBBO..",
+    "..OBBBBBBBBBBO..",
+    "..OBWWWBBWWWBO..",
+    "..OBWEWBBWEWBO..",
+    "..OBWWWMMWWWBO..",
+    "..OBBBBMMBBBBO..",
+    "..OBLLLLLLLLBO..",
+    "...OOLLLLLLOO...",
+    "....OSSSSSSO....",
+    "..OOSSSSSSSSOO..",
+    "..OBSSSSSSSSBO..",
+    "...OSSSSSSSSO...",
+    "....OBBO.OBBO...",
+    "................"],
+    pal:{B:[30,40,52],S:[30,38,44],L:[36,55,80],A:[30,45,60],M:[42,90,55]} },
+
+  bunny: { label:"Bunny", px:[
+    "....OO....OO....",
+    "....OMO..OMO....",
+    "....OMO..OMO....",
+    "...OOOOOOOOOO...",
+    "..OBBBBBBBBBBO..",
+    "..OBEEBBBBEEBO..",
+    "..OBBBLLLLBBBO..",
+    "..OBBLMMMMLBBO..",
+    "..OBBBLLLLBBBO..",
+    "...OOBBBBBBOO...",
+    "....OSSSSSSO....",
+    "..OOSSSSSSSSOO..",
+    "..OBSSSSSSSSBO..",
+    "...OSSSSSSSSO...",
+    "....OBBO.OBBO...",
+    "................"],
+    pal:{B:[32,35,86],S:[32,30,78],L:[35,40,94],A:[340,55,80],M:[345,60,72]} },
+
+  bear: { label:"Bear", px:[
+    "................",
+    "..OOO......OOO..",
+    ".OBBBOOOOOOBBBO.",
+    "..OOBBBBBBBBOO..",
+    "..OBBBBBBBBBBO..",
+    "..OBEEBBBBEEBO..",
+    "..OBBBLLLLBBBO..",
+    "..OBBLLKKLLBBO..",
+    "..OBBLLMMLLBBO..",
+    "...OOBBBBBBOO...",
+    "....OSSSSSSO....",
+    "..OOSSSSSSSSOO..",
+    "..OBSSSSSSSSBO..",
+    "...OSSSSSSSSO...",
+    "....OBBO.OBBO...",
+    "................"],
+    pal:{B:[24,42,45],S:[24,40,38],L:[30,45,72],A:[24,40,55],M:[20,35,32]} }
+};
+
+/* Props. Same grid, drawn over the character (or under, for skates).
+   Their palette is fixed so a laptop always looks like a laptop.      */
+const PROPS = {
+  laptop:{ label:"laptop", px:[
+    "................","................","................","................",
+    "................","................","................","................",
+    "................","................",
+    "....KKKKKKKK....",
+    "....KCCCCCCK....",
+    "....KCCCCCCK....",
+    "....KKKKKKKK....",
+    "...GGGGGGGGGG...",
+    "................"] },
+
+  skates:{ label:"skates", px:[
+    "................","................","................","................",
+    "................","................","................","................",
+    "................","................","................","................",
+    "................","................",
+    "...GGGGG.GGGGG..",
+    "....KWK...KWK..."] },
+
+  headphones:{ label:"headphones", px:[
+    "....KKKKKKKK....",
+    "..KKK......KKK..",
+    ".KKK........KKK.",
+    ".KKR........RKK.",
+    ".KKR........RKK.",
+    ".KKR........RKK.",
+    ".KKK........KKK.",
+    "................","................","................","................",
+    "................","................","................","................",
+    "................"] },
+
+  shades:{ label:"shades", px:[
+    "................","................","................","................",
+    "................",
+    "..KWKKKKKKKKKK..",
+    "...KKK....KKK...",
+    "................","................","................","................",
+    "................","................","................","................",
+    "................"] },
+
+  party:{ label:"party hat", px:[
+    ".........WW.....",
+    "........ORRO....",
+    ".......ORYYRO...",
+    "......ORYRRYRO..",
+    "................","................","................","................",
+    "................","................","................","................",
+    "................","................","................","................"] },
+
+  coffee:{ label:"coffee", px:[
+    "................","................","................","................",
+    "................","................","................","................",
+    "................",
+    "...........G....",
+    "..........OOOO..",
+    "..........ONNO..",
+    "..........OWWO..",
+    "..........OOOO..",
+    "................","................"] },
+
+  scarf:{ label:"scarf", px:[
+    "................","................","................","................",
+    "................","................","................","................",
+    "................",
+    "...RRRRRRRRRR...",
+    "...RRRRRRRRRR...",
+    "..........RR....",
+    "..........RR....",
+    "...........R....",
+    "................","................"] }
+};
+
+const PROP_PAL = {
+  K:"#2b2d36", G:"#8b909c", W:"#f4f6fa", C:"#a9e0f5",
+  R:"#d8553f", Y:"#f0c04a", N:"#6b4326", O:"#1b1d24", P:"#e08bb0"
+};
+
+/* ---------------------------------------------------------------------
+   2. DRAWING
+   A character is drawn by stacking sprites: props marked `under` first,
+   then the body, then the rest of the props. Colours are HSL so one hue
+   slider can walk a whole palette around the wheel.
+--------------------------------------------------------------------- */
+const hsl = (h,s,l) => "hsl(" + (((h % 360) + 360) % 360) + " " + s + "% " + l + "%)";
+
+function paletteFor(m){
+  const sp = SPECIES[m.species] || SPECIES.clawd;
+  const shift = sp.hue || ["B","S","L","A"];
+  const d = m.hue || 0;
+  const p = {};
+  for (const k in sp.pal){
+    const c = sp.pal[k];
+    p[k] = hsl(c[0] + (shift.indexOf(k) >= 0 ? d : 0), c[1], c[2]);
+  }
+  const b = sp.pal.B;
+  p.O = hsl(b[0] + (shift.indexOf("B") >= 0 ? d : 0), Math.min(58, b[1]), Math.max(11, Math.round(b[2] * 0.30)));
+  p.E = "#20242e"; p.W = "#fbf7ef"; p.K = "#191b21";
+  return p;
+}
+
+function stamp(ctx, px, pal, scale){
+  for (let y = 0; y < 16; y++){
+    const row = px[y];
+    for (let x = 0; x < 16; x++){
+      const ch = row[x];
+      if (ch === "." || !pal[ch]) continue;
+      ctx.fillStyle = pal[ch];
+      ctx.fillRect(x * scale, y * scale, scale, scale);
+    }
+  }
+}
+
+/* Props stack back-to-front in this order, whatever order they were picked:
+   a scarf goes under a laptop, skates go over everything at the feet.   */
+const PROP_ORDER = ["scarf", "laptop", "coffee", "headphones", "shades", "party", "skates"];
+
+/* Paint one character (body + props) into a context at a pixel scale. */
+function paintMember(ctx, m, scale){
+  const acc = m.acc || [];
+  stamp(ctx, (SPECIES[m.species] || SPECIES.clawd).px, paletteFor(m), scale);
+  PROP_ORDER.forEach(k => {
+    if (PROPS[k] && acc.indexOf(k) >= 0) stamp(ctx, PROPS[k].px, PROP_PAL, scale);
+  });
+}
+
+const memberKey = m => [m.species, m.hue | 0, (m.acc || []).join(",")].join("|");
+const bitmaps = new Map();
+
+function bitmapFor(m, scale){
+  const key = memberKey(m) + "|" + scale;
+  let c = bitmaps.get(key);
+  if (!c){
+    c = document.createElement("canvas");
+    c.width = c.height = 16 * scale;
+    paintMember(c.getContext("2d"), m, scale);
+    bitmaps.set(key, c);
+  }
+  return c;
+}
+
+function pixelScale(cssSize){
+  const dpr = Math.max(1, Math.min(3, Math.round(window.devicePixelRatio || 1)));
+  return Math.max(1, Math.round((cssSize * dpr) / 16));
+}
+
+/* An <canvas> element showing a member, tagged so it can be repainted. */
+function avatar(m, cssSize){
+  const c = document.createElement("canvas");
+  c.dataset.mid = m.id;
+  c.dataset.size = cssSize;
+  c.style.width = c.style.height = cssSize + "px";
+  paintInto(c, m, cssSize);
+  return c;
+}
+function paintInto(c, m, cssSize){
+  const s = pixelScale(cssSize);
+  c.width = c.height = 16 * s;
+  const ctx = c.getContext("2d");
+  ctx.imageSmoothingEnabled = false;
+  ctx.clearRect(0, 0, c.width, c.height);
+  ctx.drawImage(bitmapFor(m, s), 0, 0);
+}
+/* Repaint every avatar on screen — used while dragging the hue slider. */
+function repaintAvatars(){
+  document.querySelectorAll("canvas[data-mid]").forEach(c => {
+    const m = byId(c.dataset.mid);
+    if (m) paintInto(c, m, +c.dataset.size);
+  });
+}
+
+/* ---------------------------------------------------------------------
+   3. STATE
+--------------------------------------------------------------------- */
+const STORE = "menagerie.v1";
+const uid = () => Math.random().toString(36).slice(2, 9);
+const SPECIES_KEYS = Object.keys(SPECIES);
+const PROP_KEYS = Object.keys(PROPS);
+
+function demo(){
+  const c = [
+    { id:"m1", name:"Mira",  species:"tiger", hue:0,   acc:["skates","laptop"], right:false },
+    { id:"m2", name:"Rex",   species:"dino",  hue:0,   acc:["headphones"],      right:false },
+    { id:"m3", name:"Clawd", species:"clawd", hue:0,   acc:["coffee"],          right:false },
+    { id:"m4", name:"You",   species:"human", hue:-30, acc:[],                  right:true  }
+  ];
+  const say = (who, text) => ({ id:uid(), who, text, kind:"say" });
+  const act = text => ({ id:uid(), who:null, text, kind:"action" });
+  return {
+    title: "Standup, Thursday",
+    subtitle: "eleven minutes, no notes",
+    cast: c,
+    lines: [
+      act("Mira arrives on skates, laptop open, still typing."),
+      say("m1", "Sorry. Merge conflict on the way here."),
+      say("m2", "You resolved a merge conflict on wheels?"),
+      say("m1", "I resolved it in the elevator. The wheels were incidental."),
+      say("m3", "Reading the diff now — it is ninety percent whitespace."),
+      say("m2", "It is always ninety percent whitespace."),
+      say("m4", "Then ship it. Anything actually blocked?"),
+      say("m3", "Only the thing nobody wants to name."),
+      act("Everyone looks at the ticket. The ticket does not look back.")
+    ]
+  };
+}
+
+function blank(){
+  return {
+    title: "",
+    subtitle: "",
+    cast: [{ id:uid(), name:"Somebody", species:SPECIES_KEYS[(Math.random()*SPECIES_KEYS.length)|0], hue:0, acc:[], right:false }],
+    lines: []
+  };
+}
+
+function sane(s){
+  if (!s || typeof s !== "object") return null;
+  if (!Array.isArray(s.cast) || !Array.isArray(s.lines)) return null;
+  s.title = String(s.title || "").slice(0, 120);
+  s.subtitle = String(s.subtitle || "").slice(0, 200);
+  s.cast = s.cast.slice(0, 40).map(m => ({
+    id: String(m.id || uid()).slice(0, 24),
+    name: String(m.name || "Somebody").slice(0, 40),
+    species: SPECIES[m.species] ? m.species : "clawd",
+    hue: Math.max(-180, Math.min(180, m.hue | 0)),
+    acc: Array.isArray(m.acc) ? m.acc.filter(k => PROPS[k]).slice(0, 7) : [],
+    right: !!m.right
+  }));
+  const ids = new Set(s.cast.map(m => m.id));
+  s.lines = s.lines.slice(0, 800).map(l => ({
+    id: String(l.id || uid()).slice(0, 24),
+    who: ids.has(l.who) ? l.who : null,
+    text: String(l.text == null ? "" : l.text).slice(0, 4000),
+    kind: (l.kind === "action" || !ids.has(l.who)) ? "action" : "say"
+  }));
+  return s;
+}
+
+let state = null;
+const ui = { speaker:null, mode:"say", open:null };
+
+function byId(id){ return state.cast.find(m => m.id === id) || null; }
+
+let saveTimer = 0;
+function save(){
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(() => {
+    try { localStorage.setItem(STORE, JSON.stringify(state)); } catch (e) {}
+  }, 220);
+}
+
+/* ---------------------------------------------------------------------
+   4. RENDER
+--------------------------------------------------------------------- */
+const $ = s => document.querySelector(s);
+const castList = $("#castList"), linesEl = $("#lines"), speakersEl = $("#speakers");
+const titleIn = $("#title"), subIn = $("#subtitle"), sayIn = $("#say");
+
+function el(tag, cls, text){
+  const n = document.createElement(tag);
+  if (cls) n.className = cls;
+  if (text != null) n.textContent = text;
+  return n;
+}
+
+function propSummary(m){
+  const names = (m.acc || []).map(k => PROPS[k].label);
+  const sp = (SPECIES[m.species] || SPECIES.clawd).label.toLowerCase();
+  return names.length ? sp + " · " + names.join(", ") : sp;
+}
+
+function renderCast(){
+  castList.textContent = "";
+  state.cast.forEach(m => {
+    const row = el("div", "member" + (ui.open === m.id ? " open" : ""));
+    row.appendChild(avatar(m, 32));
+    const who = el("div", "who");
+    who.appendChild(el("div", "nm", m.name || "Unnamed"));
+    who.appendChild(el("div", "sub", propSummary(m)));
+    row.appendChild(who);
+    row.appendChild(el("div", "caret", ui.open === m.id ? "▾" : "▸"));
+    row.addEventListener("click", () => {
+      ui.open = ui.open === m.id ? null : m.id;
+      renderCast();
+    });
+    castList.appendChild(row);
+    if (ui.open === m.id) castList.appendChild(editorFor(m, row));
+  });
+}
+
+function editorFor(m, row){
+  const box = el("div", "editor");
+  box.addEventListener("click", e => e.stopPropagation());
+
+  /* name */
+  const f1 = el("div", "field");
+  f1.appendChild(el("label", null, "Name"));
+  const nameIn = el("input", "text-in");
+  nameIn.value = m.name; nameIn.maxLength = 40;
+  nameIn.addEventListener("input", () => {
+    m.name = nameIn.value;
+    row.querySelector(".nm").textContent = m.name || "Unnamed";
+    renderLines(); renderSpeakers(); save();
+  });
+  f1.appendChild(nameIn);
+  box.appendChild(f1);
+
+  /* species */
+  const f2 = el("div", "field");
+  f2.appendChild(el("label", null, "Who are they"));
+  const grid = el("div", "species");
+  SPECIES_KEYS.forEach(k => {
+    const b = el("button");
+    b.type = "button"; b.title = SPECIES[k].label;
+    b.setAttribute("aria-pressed", String(m.species === k));
+    b.appendChild(avatar({ id:m.id, species:k, hue:m.hue, acc:[] }, 32));
+    b.addEventListener("click", () => {
+      m.species = k;
+      renderCast(); renderLines(); renderSpeakers(); save();
+    });
+    grid.appendChild(b);
+  });
+  f2.appendChild(grid);
+  box.appendChild(f2);
+
+  /* hue */
+  const f3 = el("div", "field");
+  f3.appendChild(el("label", null, "Colour"));
+  const hue = document.createElement("input");
+  hue.type = "range"; hue.min = -180; hue.max = 180; hue.step = 5; hue.value = m.hue || 0;
+  hue.addEventListener("input", () => { m.hue = +hue.value; repaintAvatars(); save(); });
+  f3.appendChild(hue);
+  box.appendChild(f3);
+
+  /* props */
+  const f4 = el("div", "field");
+  f4.appendChild(el("label", null, "Carrying"));
+  const chips = el("div", "chips");
+  PROP_KEYS.forEach(k => {
+    const c = el("button", "chip", PROPS[k].label);
+    c.type = "button";
+    c.setAttribute("aria-pressed", String((m.acc || []).indexOf(k) >= 0));
+    c.addEventListener("click", () => {
+      m.acc = m.acc || [];
+      const i = m.acc.indexOf(k);
+      if (i >= 0) m.acc.splice(i, 1); else m.acc.push(k);
+      c.setAttribute("aria-pressed", String(i < 0));
+      row.querySelector(".sub").textContent = propSummary(m);
+      repaintAvatars(); save();
+    });
+    chips.appendChild(c);
+  });
+  f4.appendChild(chips);
+  box.appendChild(f4);
+
+  /* side */
+  const f5 = el("div", "field");
+  f5.appendChild(el("label", null, "Placement"));
+  const side = el("button", "chip", "speaks from the right");
+  side.type = "button";
+  side.setAttribute("aria-pressed", String(!!m.right));
+  side.addEventListener("click", () => {
+    m.right = !m.right;
+    side.setAttribute("aria-pressed", String(m.right));
+    renderLines(); save();
+  });
+  f5.appendChild(side);
+  box.appendChild(f5);
+
+  /* footer */
+  const foot = el("div", "editor-foot");
+  const del = el("button", "btn ghost danger", "Remove");
+  del.type = "button";
+  del.addEventListener("click", () => removeMember(m));
+  foot.appendChild(del);
+  const done = el("button", "btn", "Done");
+  done.type = "button"; done.className = "btn spacer";
+  done.addEventListener("click", () => { ui.open = null; renderCast(); });
+  foot.appendChild(done);
+  box.appendChild(foot);
+
+  setTimeout(() => { if (!m.name) nameIn.select(); }, 0);
+  return box;
+}
+
+function removeMember(m){
+  const mine = state.lines.filter(l => l.who === m.id).length;
+  if (mine && !confirm(m.name + " has " + mine + " line" + (mine === 1 ? "" : "s") + ". Remove them anyway?")) return;
+  state.cast = state.cast.filter(x => x.id !== m.id);
+  const heir = state.cast[0];
+  state.lines.forEach(l => {
+    if (l.who !== m.id) return;
+    if (heir) { l.who = heir.id; }
+    else { l.who = null; l.kind = "action"; }
+  });
+  if (ui.speaker === m.id) ui.speaker = heir ? heir.id : null;
+  ui.open = null;
+  renderAll(); save();
+  toast(heir && mine ? "Removed " + m.name + " — their lines went to " + heir.name : "Removed " + m.name);
+}
+
+function renderLines(){
+  linesEl.textContent = "";
+  if (!state.lines.length){
+    const e = el("div", "empty");
+    e.appendChild(el("div", null, "Nothing said yet."));
+    e.appendChild(el("div", null, "Pick who is talking below, type a line, press Enter."));
+    linesEl.appendChild(e);
+    return;
+  }
+  state.lines.forEach((ln, i) => linesEl.appendChild(lineNode(ln, i)));
+}
+
+function lineNode(ln, i){
+  const m = ln.kind === "action" ? null : byId(ln.who);
+  const wrap = el("div", "line" + (ln.kind === "action" ? " action" : (m && m.right ? " right" : "")));
+
+  if (m){
+    const av = el("button", "av");
+    av.type = "button";
+    av.title = "Click to hand this line to the next character";
+    av.appendChild(avatar(m, 48));
+    av.addEventListener("click", () => {
+      const idx = state.cast.findIndex(x => x.id === m.id);
+      const next = state.cast[(idx + 1) % state.cast.length];
+      ln.who = next.id;
+      renderLines(); save();
+    });
+    wrap.appendChild(av);
+  }
+
+  const col = el("div", "col");
+  if (m) col.appendChild(el("div", "name", m.name));
+  const bub = el("div", "bubble");
+  bub.contentEditable = "true";
+  bub.spellcheck = true;
+  bub.textContent = ln.text;
+  bub.addEventListener("input", () => { ln.text = bub.innerText.replace(/\n$/, ""); save(); });
+  bub.addEventListener("paste", e => {
+    e.preventDefault();
+    const t = (e.clipboardData || window.clipboardData).getData("text");
+    document.execCommand("insertText", false, t);
+  });
+  bub.addEventListener("keydown", e => {
+    if (e.key === "Escape") bub.blur();
+  });
+  col.appendChild(bub);
+  wrap.appendChild(col);
+
+  const tools = el("div", "tools");
+  tools.appendChild(tool("↑", "Move up", () => move(i, -1)));
+  tools.appendChild(tool("↓", "Move down", () => move(i, 1)));
+  tools.appendChild(tool("✻", "Switch between speech and stage direction", () => {
+    if (ln.kind === "action"){
+      ln.kind = "say";
+      ln.who = ui.speaker || (state.cast[0] && state.cast[0].id) || null;
+      if (!ln.who) { ln.kind = "action"; toast("Add someone to the cast first"); }
+    } else { ln.kind = "action"; }
+    renderLines(); save();
+  }));
+  tools.appendChild(tool("✕", "Delete this line", () => {
+    state.lines.splice(i, 1);
+    renderLines(); save();
+  }));
+  wrap.appendChild(tools);
+  return wrap;
+}
+
+function tool(glyph, title, fn){
+  const b = el("button", null, glyph);
+  b.type = "button"; b.title = title;
+  b.addEventListener("click", fn);
+  return b;
+}
+
+function move(i, d){
+  const j = i + d;
+  if (j < 0 || j >= state.lines.length) return;
+  const [x] = state.lines.splice(i, 1);
+  state.lines.splice(j, 0, x);
+  renderLines(); save();
+}
+
+function renderSpeakers(){
+  speakersEl.textContent = "";
+  if (ui.speaker && !byId(ui.speaker)) ui.speaker = null;
+  if (!ui.speaker && state.cast[0]) ui.speaker = state.cast[0].id;
+  state.cast.forEach(m => {
+    const b = el("button", "spk");
+    b.type = "button"; b.title = m.name;
+    b.setAttribute("aria-pressed", String(ui.speaker === m.id && ui.mode === "say"));
+    b.appendChild(avatar(m, 32));
+    b.addEventListener("click", () => {
+      ui.speaker = m.id; ui.mode = "say";
+      renderSpeakers(); updateHint(); sayIn.focus();
+    });
+    speakersEl.appendChild(b);
+  });
+  const tog = el("div", "mode-tog");
+  const act = el("button", "chip", "stage direction");
+  act.type = "button";
+  act.setAttribute("aria-pressed", String(ui.mode === "action"));
+  act.addEventListener("click", () => {
+    ui.mode = ui.mode === "action" ? "say" : "action";
+    renderSpeakers(); updateHint(); sayIn.focus();
+  });
+  tog.appendChild(act);
+  speakersEl.appendChild(tog);
+}
+
+function updateHint(){
+  const m = byId(ui.speaker);
+  sayIn.placeholder = ui.mode === "action"
+    ? "The lights go out. Nobody moves."
+    : "Say something as " + (m ? m.name : "…");
+  $("#hint").textContent = ui.mode === "action"
+    ? "Stage direction — set the scene, no speaker · Enter to add"
+    : "Enter to add · Shift+Enter for a new paragraph";
+}
+
+function renderAll(){
+  titleIn.value = state.title;
+  subIn.value = state.subtitle;
+  renderCast(); renderLines(); renderSpeakers(); updateHint();
+}
+
+/* ---------------------------------------------------------------------
+   5. COMPOSING
+--------------------------------------------------------------------- */
+function grow(){
+  sayIn.style.height = "auto";
+  sayIn.style.height = Math.min(150, sayIn.scrollHeight) + "px";
+}
+
+function addLine(){
+  const text = sayIn.value.replace(/\s+$/, "");
+  if (!text.trim()) { sayIn.focus(); return; }
+  if (ui.mode === "say" && !byId(ui.speaker)){
+    toast("Add someone to the cast first");
+    return;
+  }
+  state.lines.push({
+    id: uid(),
+    who: ui.mode === "action" ? null : ui.speaker,
+    text: text,
+    kind: ui.mode === "action" ? "action" : "say"
+  });
+  sayIn.value = ""; grow();
+  renderLines(); save();
+  requestAnimationFrame(() => { $("#scroll").scrollTop = $("#scroll").scrollHeight; });
+}
+
+sayIn.addEventListener("input", grow);
+sayIn.addEventListener("keydown", e => {
+  if (e.key === "Enter" && !e.shiftKey && !e.isComposing){ e.preventDefault(); addLine(); }
+});
+$("#addLine").addEventListener("click", addLine);
+
+titleIn.addEventListener("input", () => { state.title = titleIn.value; save(); });
+subIn.addEventListener("input", () => { state.subtitle = subIn.value; save(); });
+
+$("#addBtn").addEventListener("click", () => {
+  const used = state.cast.map(m => m.species);
+  const fresh = SPECIES_KEYS.filter(k => used.indexOf(k) < 0);
+  const pick = (fresh.length ? fresh : SPECIES_KEYS)[(Math.random() * (fresh.length || SPECIES_KEYS.length)) | 0];
+  const m = { id:uid(), name:"", species:pick, hue:0, acc:[], right:false };
+  state.cast.push(m);
+  ui.open = m.id; ui.speaker = m.id;
+  renderAll(); save();
+  castList.scrollTop = castList.scrollHeight;
+});
+
+/* mobile cast drawer */
+const pane = $("#castPane"), scrim = $("#scrim");
+function drawer(on){ pane.classList.toggle("open", on); scrim.classList.toggle("on", on); }
+$("#castToggle").addEventListener("click", () => drawer(!pane.classList.contains("open")));
+scrim.addEventListener("click", () => drawer(false));
+
+/* ---------------------------------------------------------------------
+   6. CARRYING IT SOMEWHERE ELSE
+--------------------------------------------------------------------- */
+function encodeState(){
+  const bytes = new TextEncoder().encode(JSON.stringify(state));
+  let bin = "";
+  bytes.forEach(b => { bin += String.fromCharCode(b); });
+  return btoa(bin).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+function decodeState(str){
+  let b = str.replace(/-/g, "+").replace(/_/g, "/");
+  while (b.length % 4) b += "=";
+  const bin = atob(b);
+  const bytes = Uint8Array.from(bin, c => c.charCodeAt(0));
+  return JSON.parse(new TextDecoder().decode(bytes));
+}
+
+async function copy(text, note){
+  try {
+    await navigator.clipboard.writeText(text);
+    toast(note);
+  } catch (e) {
+    const t = document.createElement("textarea");
+    t.value = text; t.style.position = "fixed"; t.style.opacity = "0";
+    document.body.appendChild(t); t.select();
+    try { document.execCommand("copy"); toast(note); }
+    catch (e2) { toast("Could not reach the clipboard"); }
+    document.body.removeChild(t);
+  }
+}
+
+function asText(){
+  const out = [];
+  if (state.title) out.push(state.title);
+  if (state.subtitle) out.push(state.subtitle);
+  if (out.length) out.push("");
+  state.lines.forEach(l => {
+    if (l.kind === "action"){ out.push("[" + l.text + "]"); return; }
+    const m = byId(l.who);
+    out.push((m ? m.name : "?") + ": " + l.text);
+  });
+  return out.join("\n");
+}
+
+$("#linkBtn").addEventListener("click", () => {
+  const url = location.origin + location.pathname + "#t=" + encodeState();
+  copy(url, url.length > 6000 ? "Link copied — it is a long one" : "Link copied");
+});
+
+/* ---------------------------------------------------------------------
+   7. EXPORT AS AN IMAGE
+   Two passes: measure everything, then paint it. Colours come from the
+   live theme, so the picture matches what you were looking at.
+--------------------------------------------------------------------- */
+function themeColor(name){
+  return getComputedStyle(document.documentElement).getPropertyValue(name).trim() || "#000";
+}
+
+function wrapText(ctx, text, maxw){
+  const out = [];
+  String(text).split("\n").forEach(para => {
+    const words = para.split(/\s+/).filter(Boolean);
+    if (!words.length){ out.push(""); return; }
+    let line = "";
+    words.forEach(w => {
+      while (ctx.measureText(w).width > maxw && w.length > 1){
+        let cut = 1;
+        while (cut < w.length && ctx.measureText(w.slice(0, cut + 1)).width <= maxw) cut++;
+        if (line) { out.push(line); line = ""; }
+        out.push(w.slice(0, cut));
+        w = w.slice(cut);
+      }
+      const t = line ? line + " " + w : w;
+      if (line && ctx.measureText(t).width > maxw){ out.push(line); line = w; }
+      else line = t;
+    });
+    out.push(line);
+  });
+  return out;
+}
+
+function roundRect(ctx, x, y, w, h, r){
+  const rr = Math.min(r, w / 2, h / 2);
+  ctx.beginPath();
+  ctx.moveTo(x + rr, y);
+  ctx.arcTo(x + w, y, x + w, y + h, rr);
+  ctx.arcTo(x + w, y + h, x, y + h, rr);
+  ctx.arcTo(x, y + h, x, y, rr);
+  ctx.arcTo(x, y, x + w, y, rr);
+  ctx.closePath();
+}
+
+/* Draws the whole transcript onto a canvas and hands it back. Kept apart
+   from the download so it can be looked at, or reused for anything else. */
+function renderTranscript(){
+  const SANS = getComputedStyle(document.body).fontFamily;
+  const W = 900, PAD = 52, AV = 48, GAP = 14, BPAD = 15, MAXB = 540, LEAD = 25;
+  const measure = document.createElement("canvas").getContext("2d");
+
+  /* --- pass one: how tall is this thing --- */
+  let y = PAD;
+  if (state.title){ measure.font = "700 30px " + SANS; y += 38; }
+  if (state.subtitle){ y += 22; }
+  if (state.title || state.subtitle) y += 18;
+
+  const plan = [];
+  state.lines.forEach(l => {
+    if (l.kind === "action"){
+      measure.font = "italic 16px " + SANS;
+      const lines = wrapText(measure, l.text, 560);
+      const h = lines.length * LEAD + 20;
+      plan.push({ kind:"action", lines, h });
+      y += h + 18;
+    } else {
+      const m = byId(l.who);
+      measure.font = "17px " + SANS;
+      const lines = wrapText(measure, l.text, MAXB - BPAD * 2);
+      let wide = 0;
+      lines.forEach(t => { wide = Math.max(wide, measure.measureText(t).width); });
+      const bw = Math.max(52, Math.min(MAXB, wide + BPAD * 2));
+      const bh = lines.length * LEAD + BPAD * 2 - 6;
+      const h = Math.max(AV, bh + 18);
+      plan.push({ kind:"say", m, lines, bw, bh, h });
+      y += h + 16;
+    }
+  });
+  const H = Math.max(340, y + PAD + 14);
+
+  /* --- pass two: paint --- */
+  const S = 2;
+  const cv = document.createElement("canvas");
+  cv.width = W * S; cv.height = H * S;
+  const ctx = cv.getContext("2d");
+  ctx.scale(S, S);
+  ctx.textBaseline = "alphabetic";
+
+  const C = {
+    bg: themeColor("--bg"), grid: themeColor("--bg-grid"), ink: themeColor("--ink"),
+    ink2: themeColor("--ink-2"), ink3: themeColor("--ink-3"), line: themeColor("--line"),
+    bub: themeColor("--bubble"), self: themeColor("--bubble-self")
+  };
+  ctx.fillStyle = C.bg; ctx.fillRect(0, 0, W, H);
+  ctx.fillStyle = C.grid;
+  for (let gx = 0; gx < W; gx += 8) for (let gy = 0; gy < H; gy += 8) ctx.fillRect(gx, gy, 1, 1);
+
+  y = PAD;
+  if (state.title){
+    ctx.font = "700 30px " + SANS; ctx.fillStyle = C.ink; ctx.textAlign = "left";
+    ctx.fillText(state.title, PAD, y + 26); y += 38;
+  }
+  if (state.subtitle){
+    ctx.font = "14px " + SANS; ctx.fillStyle = C.ink3;
+    ctx.fillText(state.subtitle, PAD, y + 12); y += 22;
+  }
+  if (state.title || state.subtitle) y += 18;
+
+  plan.forEach(p => {
+    if (p.kind === "action"){
+      ctx.strokeStyle = C.line; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(W / 2 - 190, y + 0.5); ctx.lineTo(W / 2 + 190, y + 0.5); ctx.stroke();
+      ctx.font = "italic 16px " + SANS; ctx.fillStyle = C.ink3; ctx.textAlign = "center";
+      p.lines.forEach((t, i) => ctx.fillText(t, W / 2, y + 26 + i * LEAD));
+      ctx.beginPath(); ctx.moveTo(W / 2 - 190, y + p.h - 0.5); ctx.lineTo(W / 2 + 190, y + p.h - 0.5); ctx.stroke();
+      y += p.h + 18;
+      return;
+    }
+    const m = p.m;
+    const right = !!(m && m.right);
+    const ax = right ? W - PAD - AV : PAD;
+    const bx = right ? W - PAD - AV - GAP - p.bw : PAD + AV + GAP;
+    const top = y + (p.h - Math.max(AV, p.bh + 18));
+
+    if (m){
+      const sc = Math.round((AV * S) / 16);
+      const bmp = bitmapFor(m, sc);
+      ctx.imageSmoothingEnabled = false;
+      ctx.drawImage(bmp, ax, top + p.h - AV, AV, AV);
+      ctx.font = "12px " + SANS; ctx.fillStyle = C.ink3;
+      ctx.textAlign = right ? "right" : "left";
+      ctx.fillText(m.name, right ? bx + p.bw - 12 : bx + 12, top + 11);
+    }
+    ctx.fillStyle = right ? C.self : C.bub;
+    ctx.strokeStyle = C.line; ctx.lineWidth = 1;
+    roundRect(ctx, bx, top + 18, p.bw, p.bh, 14);
+    ctx.fill(); ctx.stroke();
+
+    ctx.font = "17px " + SANS; ctx.fillStyle = C.ink; ctx.textAlign = "left";
+    p.lines.forEach((t, i) => ctx.fillText(t, bx + BPAD, top + 18 + BPAD + 12 + i * LEAD));
+    y += p.h + 16;
+  });
+
+  ctx.font = "11px " + SANS; ctx.fillStyle = C.ink3; ctx.textAlign = "right";
+  ctx.fillText("made with Menagerie", W - PAD, H - PAD + 18);
+
+  return cv;
+}
+
+function exportPNG(){
+  const slug = (state.title || "transcript").toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 40) || "transcript";
+  renderTranscript().toBlob(b => {
+    const url = URL.createObjectURL(b);
+    const a = document.createElement("a");
+    a.href = url; a.download = slug + ".png";
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 4000);
+    toast("Saved " + slug + ".png");
+  }, "image/png");
+}
+$("#pngBtn").addEventListener("click", exportPNG);
+
+/* ---------------------------------------------------------------------
+   8. MENU, THEME, TOAST, BOOT
+--------------------------------------------------------------------- */
+const menu = $("#menu"), menuBtn = $("#menuBtn");
+function openMenu(on){
+  menu.hidden = !on;
+  menuBtn.setAttribute("aria-expanded", String(on));
+}
+menuBtn.addEventListener("click", e => { e.stopPropagation(); openMenu(menu.hidden); });
+document.addEventListener("click", () => openMenu(false));
+menu.addEventListener("click", e => e.stopPropagation());
+
+const THEMES = ["", "light", "dark"];
+function cycleTheme(){
+  const now = document.documentElement.dataset.theme || "";
+  const next = THEMES[(THEMES.indexOf(now) + 1) % THEMES.length];
+  document.documentElement.dataset.theme = next;
+  try { localStorage.setItem("menagerie.theme", next); } catch (e) {}
+  toast(next ? next + " theme" : "following your system");
+}
+
+menu.addEventListener("click", e => {
+  const what = e.target.dataset && e.target.dataset.do;
+  if (!what) return;
+  openMenu(false);
+  if (what === "text") copy(asText(), "Transcript copied as text");
+  if (what === "json") copy(JSON.stringify(state, null, 2), "JSON copied");
+  if (what === "theme") cycleTheme();
+  if (what === "import"){
+    const raw = prompt("Paste a Menagerie JSON transcript:");
+    if (!raw) return;
+    let next = null;
+    try { next = sane(JSON.parse(raw)); } catch (err) { next = null; }
+    if (!next) { toast("That did not parse as a transcript"); return; }
+    state = next; ui.open = null; ui.speaker = null;
+    renderAll(); save(); toast("Loaded");
+  }
+  if (what === "demo"){
+    if (state.lines.length && !confirm("Replace what is here with the example?")) return;
+    state = demo(); ui.open = null; ui.speaker = null;
+    renderAll(); save(); toast("Here is the example");
+  }
+  if (what === "reset"){
+    if (state.lines.length && !confirm("Clear this transcript and start over?")) return;
+    state = blank(); ui.open = null; ui.speaker = null;
+    renderAll(); save(); toast("Fresh page");
+  }
+});
+
+let toastTimer = 0;
+function toast(msg){
+  const t = $("#toast");
+  t.textContent = msg;
+  t.classList.add("on");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove("on"), 2200);
+}
+
+document.addEventListener("keydown", e => {
+  if (e.key === "Escape"){ openMenu(false); drawer(false); }
+});
+
+function boot(){
+  try {
+    const t = localStorage.getItem("menagerie.theme");
+    if (t) document.documentElement.dataset.theme = t;
+  } catch (e) {}
+
+  let loaded = null, fromLink = false;
+  if (location.hash.indexOf("#t=") === 0){
+    try { loaded = sane(decodeState(location.hash.slice(3))); fromLink = !!loaded; } catch (e) { loaded = null; }
+  }
+  if (!loaded){
+    try {
+      const raw = localStorage.getItem(STORE);
+      if (raw) loaded = sane(JSON.parse(raw));
+    } catch (e) { loaded = null; }
+  }
+  state = loaded || demo();
+
+  renderAll();
+  grow();
+
+  if (fromLink){
+    history.replaceState(null, "", location.pathname + location.search);
+    save();
+    toast("Loaded from a link");
+  }
+
+  /* a different resident greets you each time */
+  const who = SPECIES_KEYS[(Math.random() * SPECIES_KEYS.length) | 0];
+  paintInto($("#logo"), { id:"logo", species:who, hue:0, acc:[] }, 32);
+}
+boot();
+</script>
+</body>
+</html>
