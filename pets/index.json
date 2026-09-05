@@ -89,8 +89,8 @@
       "spritesheet": "barley/spritesheet.png",
       "zip": "barley/barley.zip",
       "bytes": {
-        "spritesheet": 39384,
-        "zip": 15563
+        "spritesheet": 39271,
+        "zip": 15566
       }
     },
     {
@@ -109,8 +109,8 @@
       "spritesheet": "biscuit/spritesheet.png",
       "zip": "biscuit/biscuit.zip",
       "bytes": {
-        "spritesheet": 44126,
-        "zip": 17634
+        "spritesheet": 44015,
+        "zip": 17548
       }
     },
     {
@@ -129,8 +129,8 @@
       "spritesheet": "bolt/spritesheet.png",
       "zip": "bolt/bolt.zip",
       "bytes": {
-        "spritesheet": 43452,
-        "zip": 17697
+        "spritesheet": 43408,
+        "zip": 18095
       }
     },
     {
@@ -149,8 +149,8 @@
       "spritesheet": "chomp/spritesheet.png",
       "zip": "chomp/chomp.zip",
       "bytes": {
-        "spritesheet": 43377,
-        "zip": 17973
+        "spritesheet": 43240,
+        "zip": 17767
       }
     },
     {
@@ -169,8 +169,8 @@
       "spritesheet": "dev/spritesheet.png",
       "zip": "dev/dev.zip",
       "bytes": {
-        "spritesheet": 42446,
-        "zip": 17205
+        "spritesheet": 42405,
+        "zip": 17109
       }
     },
     {
@@ -189,8 +189,8 @@
       "spritesheet": "doze/spritesheet.png",
       "zip": "doze/doze.zip",
       "bytes": {
-        "spritesheet": 43960,
-        "zip": 17241
+        "spritesheet": 43828,
+        "zip": 17275
       }
     },
     {
@@ -209,8 +209,8 @@
       "spritesheet": "ember/spritesheet.png",
       "zip": "ember/ember.zip",
       "bytes": {
-        "spritesheet": 46534,
-        "zip": 19686
+        "spritesheet": 46400,
+        "zip": 19484
       }
     },
     {
@@ -229,8 +229,8 @@
       "spritesheet": "mochi/spritesheet.png",
       "zip": "mochi/mochi.zip",
       "bytes": {
-        "spritesheet": 42013,
-        "zip": 17415
+        "spritesheet": 41812,
+        "zip": 16992
       }
     },
     {
@@ -249,8 +249,8 @@
       "spritesheet": "otto/spritesheet.png",
       "zip": "otto/otto.zip",
       "bytes": {
-        "spritesheet": 46050,
-        "zip": 19638
+        "spritesheet": 45866,
+        "zip": 19402
       }
     },
     {
@@ -269,8 +269,8 @@
       "spritesheet": "pesto/spritesheet.png",
       "zip": "pesto/pesto.zip",
       "bytes": {
-        "spritesheet": 44911,
-        "zip": 17916
+        "spritesheet": 44823,
+        "zip": 17805
       }
     },
     {
@@ -289,8 +289,8 @@
       "spritesheet": "pinch/spritesheet.png",
       "zip": "pinch/pinch.zip",
       "bytes": {
-        "spritesheet": 37101,
-        "zip": 15316
+        "spritesheet": 37012,
+        "zip": 15584
       }
     },
     {
@@ -309,8 +309,8 @@
       "spritesheet": "pip/spritesheet.png",
       "zip": "pip/pip.zip",
       "bytes": {
-        "spritesheet": 41193,
-        "zip": 17388
+        "spritesheet": 41043,
+        "zip": 17572
       }
     },
     {
@@ -329,8 +329,8 @@
       "spritesheet": "rex/spritesheet.png",
       "zip": "rex/rex.zip",
       "bytes": {
-        "spritesheet": 44773,
-        "zip": 18169
+        "spritesheet": 44674,
+        "zip": 18245
       }
     },
     {
@@ -349,8 +349,8 @@
       "spritesheet": "squish/spritesheet.png",
       "zip": "squish/squish.zip",
       "bytes": {
-        "spritesheet": 38883,
-        "zip": 16212
+        "spritesheet": 38759,
+        "zip": 15699
       }
     },
     {
@@ -369,8 +369,8 @@
       "spritesheet": "stripe/spritesheet.png",
       "zip": "stripe/stripe.zip",
       "bytes": {
-        "spritesheet": 39581,
-        "zip": 15406
+        "spritesheet": 39457,
+        "zip": 15278
       }
     },
     {
@@ -389,8 +389,8 @@
       "spritesheet": "waddle/spritesheet.png",
       "zip": "waddle/waddle.zip",
       "bytes": {
-        "spritesheet": 43151,
-        "zip": 16791
+        "spritesheet": 43062,
+        "zip": 16601
       }
     },
     {
@@ -409,8 +409,8 @@
       "spritesheet": "zoom/spritesheet.png",
       "zip": "zoom/zoom.zip",
       "bytes": {
-        "spritesheet": 36306,
-        "zip": 14666
+        "spritesheet": 36174,
+        "zip": 14368
       }
     }
   ]

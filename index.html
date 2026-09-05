@@ -584,6 +584,20 @@ const PROPS = {
     "................","...RRRRRRRRRR...","...RYYRRYYRRR...","..........RRR...",
     "..........RRR...","..........R.R...","................","................"] }
 };
+/* Two hands on the keyboard, alternating. Drawn in the animal's own colour
+   so they read as its hands, and on the body rows so they travel with the
+   laptop rather than with the head. */
+const HANDS = [
+  ["................","................","................","................",
+   "................","................","................","................",
+   "................","................","................","................",
+   "................",".....BBB........",".........BBB....","................"],
+  ["................","................","................","................",
+   "................","................","................","................",
+   "................","................","................","................",
+   "................",".........BBB....",".....BBB........","................"]
+];
+
 const PROP_PAL = { K:"#2b2d36", G:"#8b909c", W:"#f4f6fa", C:"#a9e0f5",
                    R:"#d8553f", Y:"#f0c04a", N:"#6b4326", O:"#1b1d24" };
 const PROP_ORDER = ["scarf","laptop","coffee","headphones","shades","party","skates"];
@@ -650,10 +664,13 @@ function stamp(ctx, px, pal, scale, ox, oy, pose){
 
 function paintMember(ctx, m, scale, ox, oy, pose){
   const acc = m.acc || [];
-  stamp(ctx, (SPECIES[m.species] || SPECIES.clawd).px, paletteFor(m), scale, ox || 0, oy || 0, pose);
+  const pal = paletteFor(m);
+  stamp(ctx, (SPECIES[m.species] || SPECIES.clawd).px, pal, scale, ox || 0, oy || 0, pose);
   PROP_ORDER.forEach(k => {
     if (PROPS[k] && acc.indexOf(k) >= 0) stamp(ctx, PROPS[k].px, PROP_PAL, scale, ox || 0, oy || 0, pose);
   });
+  if (pose && pose.typing != null && acc.indexOf("laptop") >= 0)
+    stamp(ctx, HANDS[pose.typing ? 1 : 0], pal, scale, ox || 0, oy || 0, pose);
 }
 
 function drawGlyph(ctx, name, scale, x, y, alpha){
@@ -757,16 +774,18 @@ function frameFor(mood, t, sp){
       const ph = ((t * 0.42) + i * 0.34) % 1;
       marks.push({ g:"z", x: 13 + ph * 4, y: 4 - ph * 6, a: (1 - ph) * 0.9 });
     }
-    return { pose:{ hy: 1 + breathe, by: 0, shear: 1 }, marks };
+    return { pose:{ hy: 1 + breathe, by: breathe, shear: 1 }, marks };
   }
   if (mood === "idle"){
-    return { pose:{ hy: S(t * 1.7) > 0.55 ? -1 : 0 }, marks };
+    /* head and body move together. Lifting the head alone detaches it from
+       the shoulders, which the laptop then hides, and it reads as broken. */
+    const up = S(t * 1.7) > 0.55 ? -1 : 0;
+    return { pose:{ hy: up, by: up }, marks };
   }
   if (mood === "work"){
-    const tick = Math.floor(t * 10) % 2;
-    const nod = S(t * 2.1) > 0.75 ? -1 : 0;
+    const breath = S(t * 1.9) > 0.62 ? -1 : 0;
     if (S(t * 3.1) > 0.93) marks.push({ g:"spark", x: 12, y: 9, a: 0.9 });
-    return { pose:{ hy: nod - (tick ? 0 : 1), by: tick ? 0 : -1, shear: 0 }, marks };
+    return { pose:{ hy: breath, by: breath, shear: 0, typing: Math.floor(t * 9) % 2 }, marks };
   }
   if (mood === "skate"){
     /* the same typing bob, carried across the stage on wheels. travel is
@@ -774,8 +793,7 @@ function frameFor(mood, t, sp){
     const glide = t * 1.5;
     const travel = S(glide) * TRAVEL;
     const vel = C(glide);                       // + moving right, - moving left
-    const tick = Math.floor(t * 10) % 2;
-    const nod = S(t * 2.1) > 0.75 ? -1 : 0;
+    const breath = S(t * 1.9) > 0.62 ? -1 : 0;
     const behind = vel > 0 ? -3 : 17;
     const speed = Math.min(1, Math.abs(vel) * 1.6);
     if (speed > 0.25){
@@ -784,7 +802,8 @@ function frameFor(mood, t, sp){
     }
     if (S(t * 3.1) > 0.93) marks.push({ g:"spark", x: 12, y: 9, a: 0.9 });
     return {
-      pose:{ hy: nod - (tick ? 0 : 1), by: tick ? 0 : -1, shear: R(vel * 2), travel: travel },
+      pose:{ hy: breath, by: breath, shear: R(vel * 2), travel: travel,
+             typing: Math.floor(t * 9) % 2 },
       marks
     };
   }
