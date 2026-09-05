@@ -459,7 +459,7 @@ const SPECIES = {
     "..OBSSSSSSSSBO..","...OSSSSSSSSO...","....OBBO.OBBO...","................"],
     pal:{B:[35,18,58],S:[35,16,48],L:[38,25,88],A:[38,20,70],M:[345,50,65]} },
 
-  frog: { label:"Frog", move:"hop", sound:"ribbit", fx:"note", cry:"Ribbit", px:[
+  frog: { label:"Frog", move:"hop", fx:"note", cry:"Ribbit", px:[
     "...OOO....OOO...","..OWWWO..OWWWO..","..OWEWO..OWEWO..","..OBBBOOOOBBBO..",
     "..OBBBBBBBBBBO..","..OBBBBBBBBBBO..","..OBBBBBBBBBBO..","..OBLLLLLLLLBO..",
     "..OOMMMMMMMMOO..","...OOLLLLLLOO...","....OSSSSSSO....","..OOSSSSSSSSOO..",
@@ -488,7 +488,7 @@ const SPECIES = {
     "..OBSSSSSSSSBO..","...OSSSSSSSSO...","....OBBO.OBBO...","................"],
     pal:{B:[32,35,86],S:[32,30,78],L:[35,40,94],A:[340,55,80],M:[345,60,72]} },
 
-  bear: { label:"Bear", move:"lean", sound:"rumble", fx:"star", cry:"Rumble", px:[
+  bear: { label:"Bear", move:"lean", fx:"star", cry:"Rumble", px:[
     "................","..OOO......OOO..",".OBBBOOOOOOBBBO.","..OOBBBBBBBBOO..",
     "..OBBBBBBBBBBO..","..OBEEBBBBEEBO..","..OBBBLLLLBBBO..","..OBBLLKKLLBBO..",
     "..OBBLLMMLLBBO..","...OOBBBBBBOO...","....OSSSSSSO....","..OOSSSSSSSSOO..",
@@ -841,6 +841,11 @@ function frameFor(mood, t, sp){
 -------------------------------------------------------------------- */
 let actx = null, master = null, noiseBuf = null;
 let soundOn = true;
+/* Voices are written for character, not for level: a bandpass throws away
+   most of what passes through it, and three in parallel throw away more.
+   This trim is set per animal just before its voice plays, measured by
+   rendering each one offline, so the writing stays about the animal. */
+let voiceTrim = 1;
 
 function audio(){
   if (!soundOn) return null;
@@ -871,7 +876,7 @@ function tone(o){
   /* a bandpass throws away everything off resonance, so a voice with a
      formant lands far quieter than a raw oscillator at the same gain.
      Give it back roughly what the filter takes. */
-  const peak = (o.g == null ? 0.12 : o.g) * (o.bp ? Math.min(4, 1 + (o.q || 1.2) * 0.85) : 1);
+  const peak = (o.g == null ? 0.12 : o.g) * voiceTrim * (o.bp ? Math.min(4, 1 + (o.q || 1.2) * 0.85) : 1);
   osc.type = o.type || "sine";
   osc.frequency.setValueAtTime(o.f, t0);
   if (o.f2) osc.frequency.exponentialRampToValueAtTime(Math.max(20, o.f2), t0 + d);
@@ -899,19 +904,7 @@ function tone(o){
   osc.start(t0); osc.stop(t0 + d + 0.03);
 }
 
-/* A shout: pitch arcs up then collapses, a throat resonance on top, a
-   growl in the gain, and breath underneath. */
-function roar(o){
-  const f = o.f, d = o.d || 0.75, g = o.g == null ? 0.17 : o.g, t = o.t || 0;
-  tone({ f: f * 0.75, f2: f * 1.2, d: d * 0.3, type:"sawtooth", g: g,
-         bp: o.bp || 620, q: 1.1, am: o.rough || 26, amDepth: 0.45, atk: 0.05, t: t });
-  tone({ f: f * 1.2, f2: f * 0.55, d: d * 0.8, type:"sawtooth", g: g * 0.95,
-         bp: (o.bp || 620) * 0.8, q: 1.4, am: (o.rough || 26) * 0.7, amDepth: 0.5, t: t + d * 0.28 });
-  noise({ f: (o.bp || 620) * 1.6, f2: (o.bp || 620) * 0.5, d: d, type:"bandpass",
-          g: g * 0.45, q: 0.7, t: t });
-}
-
-/* filtered noise - whooshes, thuds, clicks, wingbeats */
+/* filtered noise: whooshes, thuds, clicks, wingbeats, breath */
 function noise(o){
   const c = audio();
   if (!c) return;
@@ -925,98 +918,174 @@ function noise(o){
   flt.Q.value = o.q || 1;
   const g = c.createGain();
   g.gain.setValueAtTime(0.0001, t0);
-  g.gain.linearRampToValueAtTime(o.g == null ? 0.12 : o.g, t0 + Math.min(0.015, d / 3));
+  g.gain.linearRampToValueAtTime((o.g == null ? 0.12 : o.g) * voiceTrim, t0 + Math.min(0.015, d / 3));
   g.gain.exponentialRampToValueAtTime(0.0001, t0 + d);
   src.connect(flt); flt.connect(g); g.connect(master);
   src.start(t0); src.stop(t0 + d + 0.03);
 }
 
-/* One recipe per move. A species can override with its own `sound`. */
-const SFX = {
-  rise:    () => [523, 659, 784, 1047].forEach((f, i) => tone({ f:f, d:0.34, type:"triangle", g:0.10, t:i*0.085 })),
-  stomp:   () => { tone({ f:150, f2:40, d:0.34, type:"sine", g:0.24, t:0.40 });
-                   noise({ f:420, f2:70, d:0.22, type:"lowpass", g:0.20, t:0.40 }); },
-  spin:    () => { tone({ f:260, f2:1150, d:0.40, type:"triangle", g:0.10 });
-                   tone({ f:1150, f2:260, d:0.38, type:"triangle", g:0.10, t:0.42 }); },
-  lean:    () => { tone({ f:230, f2:340, d:0.16, type:"triangle", g:0.11 });
-                   tone({ f:340, f2:270, d:0.20, type:"triangle", g:0.08, t:0.18 }); },
-  crouch:  () => { tone({ f:620, f2:900, d:0.10, type:"sine", g:0.09 });
-                   noise({ f:1100, f2:3000, d:0.18, type:"highpass", g:0.13, t:0.34 }); },
-  hop:     () => { tone({ f:280, f2:720, d:0.11, type:"square", g:0.09 });
-                   tone({ f:720, f2:280, d:0.11, type:"square", g:0.09, t:0.13 });
-                   tone({ f:280, f2:720, d:0.11, type:"square", g:0.08, t:0.50 }); },
-  glitch:  () => { for (let i = 0; i < 6; i++) tone({ f:900 - i*115, d:0.05, type:"square", g:0.09, t:i*0.07 });
-                   noise({ f:1800, d:0.10, type:"bandpass", g:0.11, q:8, t:0.44 }); },
-  flap:    () => { [0, 0.14, 0.28].forEach(t => noise({ f:750, f2:280, d:0.10, type:"bandpass", g:0.15, q:1.2, t:t }));
-                   tone({ f:430, f2:392, d:0.28, type:"sine", g:0.09, t:0.34 });
-                   tone({ f:330, d:0.24, type:"sine", g:0.08, t:0.60 }); },
-  lunge:   () => { noise({ f:1900, f2:380, d:0.17, type:"highpass", g:0.17 });
-                   tone({ f:190, f2:55, d:0.12, type:"sawtooth", g:0.15, t:0.14 });
-                   noise({ f:2700, d:0.05, type:"bandpass", g:0.22, q:5, t:0.16 }); },
-  dive:    () => { noise({ f:1500, f2:220, d:0.48, type:"lowpass", g:0.16 });
-                   tone({ f:300, f2:120, d:0.30, type:"sine", g:0.08 });
-                   noise({ f:300, d:0.10, type:"lowpass", g:0.16, t:0.50 }); },
-  wiggle:  () => { for (let i = 0; i < 5; i++)
-                     tone({ f:380 + i*95, f2:880 + i*95, d:0.09, type:"sine", g:0.12, t:i*0.14 }); },
-  dash:    () => { tone({ f:300, f2:1500, d:0.15, type:"square", g:0.07 });
-                   noise({ f:900, f2:3200, d:0.22, type:"highpass", g:0.13 }); },
-  rear:    () => { tone({ f:95, f2:52, d:0.55, type:"sawtooth", g:0.17 });
-                   noise({ f:600, f2:2600, d:0.45, type:"bandpass", g:0.15, q:0.7, t:0.14 }); },
-  scuttle: () => { for (let i = 0; i < 7; i++){
-                     noise({ f:2100 + i*140, d:0.05, type:"bandpass", g:0.30, q:2.2, t:i*0.09 });
-                     tone({ f:1500 + i*90, d:0.02, type:"square", g:0.05, t:i*0.09 });
-                   } },
-  stretch: () => { tone({ f:350, f2:150, d:1.05, type:"sine", g:0.11 });
-                   tone({ f:175, f2:78, d:1.15, type:"triangle", g:0.06 }); },
-  ribbit:  () => { [0, 0.22].forEach(t => { tone({ f:150, f2:230, d:0.09, type:"sawtooth", g:0.13, t:t });
-                                            tone({ f:230, f2:140, d:0.10, type:"sawtooth", g:0.13, t:t + 0.09 }); }); },
-  rumble:  () => { tone({ f:80, f2:58, d:0.6, type:"sawtooth", g:0.16 });
-                   noise({ f:220, f2:90, d:0.5, type:"lowpass", g:0.10 }); }
-};
+/* A voice, built the way a real one works rather than as a beep with a
+   filter on it.
+
+     source    a sawtooth standing in for the glottal pulse, plus breath
+     jitter    slow noise on the pitch, because nothing alive holds a tone
+     formants  three bandpass filters in PARALLEL, which is what makes a
+               throat a throat and not a tube
+     rough     amplitude modulation in the 20-60Hz range, which is the
+               subharmonic buzz that separates a growl from a hum
+
+   pitch is a list of [fraction of the duration, hz] breakpoints, so a
+   meow can rise and fall the way a meow actually does.                */
+function animalVoice(v){
+  const c = audio();
+  if (!c) return;
+  const t0 = c.currentTime + (v.t || 0), d = v.d;
+  const g0 = v.g * voiceTrim;
+  const out = c.createGain();
+  out.gain.setValueAtTime(0.0001, t0);
+  out.gain.exponentialRampToValueAtTime(g0, t0 + (v.atk || 0.02));
+  if (v.hold) out.gain.setValueAtTime(g0, t0 + Math.min(v.hold, d * 0.9));
+  out.gain.exponentialRampToValueAtTime(0.0001, t0 + d);
+  out.connect(master);
+
+  if (v.rough){
+    const lfo = c.createOscillator(), amp = c.createGain();
+    lfo.type = "sawtooth";
+    lfo.frequency.setValueAtTime(v.rough, t0);
+    if (v.rough2) lfo.frequency.linearRampToValueAtTime(v.rough2, t0 + d);
+    amp.gain.value = g0 * (v.roughDepth || 0.5);
+    lfo.connect(amp); amp.connect(out.gain);
+    lfo.start(t0); lfo.stop(t0 + d + 0.05);
+  }
+
+  const src = c.createOscillator();
+  src.type = v.wave || "sawtooth";
+  const pts = v.pitch;
+  src.frequency.setValueAtTime(pts[0][1], t0);
+  for (let i = 1; i < pts.length; i++)
+    src.frequency.exponentialRampToValueAtTime(Math.max(20, pts[i][1]), t0 + d * pts[i][0]);
+
+  if (v.jitter){
+    const j = c.createBufferSource(); j.buffer = noiseBuf; j.loop = true;
+    const jf = c.createBiquadFilter(); jf.type = "lowpass"; jf.frequency.value = v.jitterHz || 14;
+    const jg = c.createGain(); jg.gain.value = v.jitter;   // cents
+    j.connect(jf); jf.connect(jg); jg.connect(src.detune);
+    j.start(t0); j.stop(t0 + d + 0.05);
+  }
+
+  const breathSrc = v.breath ? (() => {
+    const n = c.createBufferSource(); n.buffer = noiseBuf; n.loop = true;
+    const g = c.createGain(); g.gain.value = v.breath;
+    n.connect(g); n.start(t0); n.stop(t0 + d + 0.05);
+    return g;
+  })() : null;
+
+  (v.formants || [[700, 4, 1]]).forEach(f => {
+    const bp = c.createBiquadFilter();
+    bp.type = "bandpass";
+    bp.frequency.setValueAtTime(f[0], t0);
+    bp.Q.value = f[1];
+    if (f[3]) bp.frequency.exponentialRampToValueAtTime(Math.max(80, f[3]), t0 + d);
+    const fg = c.createGain(); fg.gain.value = f[2];
+    src.connect(bp);
+    if (breathSrc) breathSrc.connect(bp);
+    bp.connect(fg); fg.connect(out);
+  });
+
+  src.start(t0); src.stop(t0 + d + 0.05);
+}
 
 /* One voice per animal. A move still supplies its motion noise, but what
    you hear first is the creature: the dinosaur shouts, the cat complains,
    the owl asks a question and does not wait for an answer. */
 const VOICES = {
-  dino:    () => { roar({ f: 118, d: 0.95, g: 0.19, bp: 520, rough: 20 });
-                   noise({ f: 260, f2: 90, d: 0.3, type:"lowpass", g: 0.12, t: 0.75 }); },
-  dragon:  () => { roar({ f: 96, d: 0.9, g: 0.18, bp: 460, rough: 17 });
-                   noise({ f: 700, f2: 2800, d: 0.5, type:"bandpass", g: 0.15, q: 0.7, t: 0.42 }); },
-  tiger:   () => { roar({ f: 150, d: 0.8, g: 0.17, bp: 780, rough: 30 }); },
-  bear:    () => { roar({ f: 84,  d: 0.85, g: 0.17, bp: 380, rough: 15 }); },
+  /* big cats and bigger: low pitch, heavy subharmonic buzz, breath on top */
+  dino:    () => { animalVoice({ d:1.15, g:0.26, atk:0.05, hold:0.45,
+                     pitch:[[0,68],[0.12,112],[0.55,96],[1,52]],
+                     formants:[[185,7,1],[520,5,0.62],[1150,4,0.3]],
+                     rough:36, rough2:19, roughDepth:0.6, jitter:60, jitterHz:19, breath:0.5 });
+                   noise({ f:240, f2:80, d:0.35, type:"lowpass", g:0.10, t:0.85 }); },
+  dragon:  () => { animalVoice({ d:1.2, g:0.25, atk:0.05, hold:0.5,
+                     pitch:[[0,58],[0.15,92],[0.6,80],[1,44]],
+                     formants:[[160,7,1],[440,5,0.6],[980,4,0.28]],
+                     rough:30, rough2:16, roughDepth:0.62, jitter:65, jitterHz:16, breath:0.5 });
+                   noise({ f:700, f2:2900, d:0.55, type:"bandpass", g:0.16, q:0.7, t:0.5 }); },
+  tiger:   () => animalVoice({ d:0.95, g:0.25, atk:0.04, hold:0.35,
+                     pitch:[[0,95],[0.15,155],[0.6,132],[1,74]],
+                     formants:[[250,6,1],[700,5,0.6],[1500,4,0.3]],
+                     rough:44, rough2:26, roughDepth:0.55, jitter:52, jitterHz:22, breath:0.45 }),
+  bear:    () => animalVoice({ d:1.05, g:0.24, atk:0.07, hold:0.5,
+                     pitch:[[0,52],[0.2,78],[0.7,70],[1,44]],
+                     formants:[[175,7,1],[400,5,0.55],[880,4,0.25]],
+                     rough:27, rough2:17, roughDepth:0.6, jitter:45, jitterHz:13, breath:0.4 }),
+
+  /* a meow is a formant transition, not a pitch: mee slides into ow */
+  cat:     () => animalVoice({ d:0.6, g:0.19, atk:0.03,
+                     pitch:[[0,470],[0.22,830],[0.6,780],[1,430]],
+                     formants:[[760,7,1,1080],[1850,6,0.55,1250],[2900,5,0.22,2500]],
+                     jitter:26, jitterHz:9, breath:0.12, rough:0 }),
+
+  /* a croak is a pulse train, so the roughness carries it */
+  frog:    () => [0, 0.34].forEach(t => animalVoice({ d:0.26, g:0.21, atk:0.012, t:t,
+                     pitch:[[0,112],[0.3,138],[1,104]],
+                     formants:[[430,8,1],[1120,6,0.45]],
+                     rough:29, roughDepth:0.85, jitter:35, jitterHz:26, breath:0.2 })),
+
+  /* a hoot is nearly a pure tone with a soft edge and a slow vibrato */
+  owl:     () => [0, 0.52].forEach((t, i) => animalVoice({ d:0.42, g:0.2 - i * 0.03, atk:0.1, t:t,
+                     wave:"triangle",
+                     pitch:[[0,372 - i * 14],[0.35,398 - i * 14],[1,352 - i * 14]],
+                     formants:[[400 - i * 14,12,1],[820,7,0.16]],
+                     jitter:12, jitterHz:5.5, breath:0.06 })),
+
+  penguin: () => [0, 0.26, 0.52].forEach(t => animalVoice({ d:0.2, g:0.2, atk:0.015, t:t,
+                     pitch:[[0,250],[0.25,420],[1,270]],
+                     formants:[[720,6,1],[1650,5,0.6],[2700,4,0.3]],
+                     rough:58, roughDepth:0.7, jitter:95, jitterHz:30, breath:0.3 })),
+
+  fox:     () => { [0, 0.19].forEach(t => animalVoice({ d:0.13, g:0.17, atk:0.01, t:t,
+                     pitch:[[0,1050],[0.3,1480],[1,1150]],
+                     formants:[[1450,7,1],[2700,5,0.4]],
+                     rough:22, roughDepth:0.4, jitter:70, jitterHz:28, breath:0.2 }));
+                   animalVoice({ d:0.36, g:0.16, atk:0.02, t:0.4,
+                     pitch:[[0,1250],[0.25,1520],[1,760]],
+                     formants:[[1500,6,1],[2800,5,0.35]],
+                     rough:19, roughDepth:0.45, jitter:80, jitterHz:24, breath:0.25 }); },
+
+  bunny:   () => { animalVoice({ d:0.13, g:0.2, atk:0.01,
+                     pitch:[[0,1500],[0.4,2350],[1,1750]],
+                     formants:[[2300,7,1],[3400,5,0.3]],
+                     jitter:40, jitterHz:20, breath:0.15 });
+                   noise({ f:170, f2:65, d:0.15, type:"lowpass", g:0.26, t:0.26 });
+                   noise({ f:170, f2:65, d:0.15, type:"lowpass", g:0.21, t:0.46 }); },
+
+  sloth:   () => animalVoice({ d:0.95, g:0.18, atk:0.16,
+                     pitch:[[0,1650],[0.35,2500],[1,1420]],
+                     formants:[[2500,8,1],[3600,5,0.25]],
+                     jitter:22, jitterHz:7, breath:0.2 }),
+
+  human:   () => animalVoice({ d:0.42, g:0.2, atk:0.025,
+                     pitch:[[0,142],[0.25,188],[0.7,176],[1,128]],
+                     formants:[[640,6,1,760],[1240,5,0.55,1150],[2500,4,0.22]],
+                     jitter:18, jitterHz:8, breath:0.18 }),
+
+  clawd:   () => [0, 0.11, 0.22].forEach((t, i) => animalVoice({ d:0.13, g:0.17, atk:0.012, t:t,
+                     wave:"triangle",
+                     pitch:[[0,660 + i * 190],[0.4,1180 + i * 190],[1,900 + i * 190]],
+                     formants:[[1500 + i * 200,7,1]],
+                     jitter:16, jitterHz:12 })),
+
+  /* the ones with no voice keep the sound they actually make */
   shark:   () => { noise({ f: 1900, f2: 380, d: 0.17, type:"highpass", g: 0.17 });
                    tone({ f: 190, f2: 55, d: 0.12, type:"sawtooth", g: 0.16, t: 0.14 });
                    noise({ f: 2700, d: 0.05, type:"bandpass", g: 0.24, q: 5, t: 0.16 }); },
-  cat:     () => { tone({ f: 520, f2: 880, d: 0.17, type:"sawtooth", g: 0.11, bp: 1150, q: 2 });
-                   tone({ f: 880, f2: 430, d: 0.36, type:"sawtooth", g: 0.12, bp: 950, q: 2, t: 0.16 }); },
-  frog:    () => { [0, 0.24].forEach(t => {
-                     tone({ f: 150, f2: 235, d: 0.09, type:"sawtooth", g: 0.14, bp: 420, q: 3, t: t });
-                     tone({ f: 235, f2: 140, d: 0.11, type:"sawtooth", g: 0.14, bp: 380, q: 3, t: t + 0.09 }); }); },
-  owl:     () => { [0, 0.42].forEach((t, i) => {
-                     tone({ f: 412, f2: 386, d: 0.34, type:"sine", g: 0.20 - i * 0.03,
-                            bp: 900, q: 2, am: 5.5, amDepth: 0.2, atk: 0.09, t: t }); }); },
-  penguin: () => { [0, 0.2, 0.4].forEach(t =>
-                     tone({ f: 420, f2: 300, d: 0.15, type:"sawtooth", g: 0.12,
-                            bp: 1500, q: 2.5, am: 34, amDepth: 0.6, t: t })); },
-  fox:     () => { [0, 0.17].forEach(t =>
-                     tone({ f: 900, f2: 1500, d: 0.11, type:"square", g: 0.13, bp: 2000, q: 2, t: t }));
-                   tone({ f: 1500, f2: 700, d: 0.3, type:"sawtooth", g: 0.13, bp: 1800, q: 2, t: 0.36 }); },
-  bunny:   () => { tone({ f: 900, f2: 1450, d: 0.09, type:"sine", g: 0.17, bp: 2200, q: 2 });
-                   noise({ f: 180, f2: 70, d: 0.14, type:"lowpass", g: 0.24, t: 0.22 });
-                   noise({ f: 180, f2: 70, d: 0.14, type:"lowpass", g: 0.19, t: 0.42 }); },
-  sloth:   () => { tone({ f: 620, f2: 980, d: 0.5, type:"sine", g: 0.10, bp: 1600, q: 2.5, atk: 0.18 });
-                   tone({ f: 980, f2: 520, d: 0.7, type:"sine", g: 0.09, bp: 1300, q: 2.5, t: 0.5 }); },
   octopus: () => { for (let i = 0; i < 5; i++)
                      tone({ f: 380 + i * 95, f2: 880 + i * 95, d: 0.09, type:"sine", g: 0.17, t: i * 0.14 }); },
   crab:    () => { for (let i = 0; i < 7; i++){
                      noise({ f: 2100 + i * 140, d: 0.05, type:"bandpass", g: 0.36, q: 2.2, t: i * 0.09 });
                      tone({ f: 1500 + i * 90, d: 0.02, type:"square", g: 0.08, t: i * 0.09 }); } },
   robot:   () => { for (let i = 0; i < 6; i++) tone({ f: 900 - i * 115, d: 0.05, type:"square", g: 0.15, t: i * 0.07 });
-                   noise({ f: 1800, d: 0.1, type:"bandpass", g: 0.17, q: 8, t: 0.44 }); },
-  human:   () => { tone({ f: 300, f2: 460, d: 0.14, type:"sawtooth", g: 0.10, bp: 1000, q: 2.5 });
-                   tone({ f: 460, f2: 330, d: 0.24, type:"sawtooth", g: 0.10, bp: 800, q: 2.5, t: 0.13 }); },
-  clawd:   () => { [523, 784, 1047].forEach((f, i) =>
-                     tone({ f: f, f2: f * 1.35, d: 0.13, type:"triangle", g: 0.17, t: i * 0.1 })); }
+                   noise({ f: 1800, d: 0.1, type:"bandpass", g: 0.17, q: 8, t: 0.44 }); }
 };
 
 /* the two moods that react to what the model did */
@@ -1025,15 +1094,19 @@ const sfxDone = () => { tone({ f:660, d:0.12, type:"triangle", g:0.09 });
 const sfxFail = () => { tone({ f:200, f2:120, d:0.20, type:"square", g:0.10 });
                         tone({ f:150, f2:90,  d:0.28, type:"square", g:0.09, t:0.16 }); };
 
+/* measured by rendering every voice offline and levelling to the same peak */
+const TRIM = {
+  clawd:7.5, bunny:3.6, sloth:3.3, cat:3.0, human:2.3, frog:2.3, fox:2.0,
+  penguin:1.5, bear:1.3, owl:1.2, dino:1.15, tiger:1.1, dragon:1.1,
+  octopus:0.9, robot:1, crab:1, shark:0.65
+};
+
 function playMove(sp, speciesId){
   const voice = VOICES[speciesId];
-  const motion = SFX[sp.sound || sp.move];
-  try {
-    if (voice) voice();
-    /* keep the movement audible under the voice, quietly, unless the
-       voice already is the movement */
-    else if (motion) motion();
-  } catch (e) {}
+  if (!voice) return;
+  voiceTrim = TRIM[speciesId] || 1;
+  try { voice(); } catch (e) {}
+  finally { voiceTrim = 1; }
 }
 
 /* ---------------------------------------------------------------------

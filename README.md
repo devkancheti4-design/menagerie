@@ -75,12 +75,26 @@ scuttles sideways in a cloud of bubbles, the octopus wiggles all eight, the fox
 leaves speed lines, and the sloth takes a very long time to stretch.
 
 Every animal has its own voice, synthesised on the spot with the Web Audio API.
-No audio files to download. The dinosaur shouts, the tiger and the bear growl
-underneath it, the cat complains on the way up and the way down, the owl asks
-twice and does not wait for an answer, the fox yips, the penguin brays, the
-frog gets two notes and the crab gets seven clicks. A roar is a pitch arc with
-a throat resonance over it and a wobble in the gain, which is the difference
-between a growl and a beep. **♪** in the header mutes the lot, and it sticks.
+No audio files to download, nothing to install.
+
+Each one is built the way a real voice works rather than as a beep with a
+filter on it. A sawtooth stands in for the glottal pulse, slow noise jitters
+the pitch because nothing alive holds a steady tone, three bandpass filters
+run in **parallel** as formants, which is what makes a throat a throat instead
+of a tube, and an amplitude modulation in the 20 to 60 Hz range supplies the
+subharmonic buzz that separates a growl from a hum. Pitch is a list of
+breakpoints, so a meow rises and falls the way a meow does and a roar collapses
+at the end.
+
+The dinosaur shouts for a second and a bit at 68 Hz. The tiger and the bear
+growl under it, the cat is a formant slide rather than a pitch change, the owl
+is nearly a pure tone asked twice, the fox yips then screams, the penguin
+brays. The shark, the crab, the octopus and the robot never had voices, so they
+keep the sounds they actually make.
+
+Levels are measured, not guessed: every voice is rendered offline and trimmed
+to the same peak, so the roster sits inside a 1.2x band. **♪** in the header
+mutes the lot, and it sticks.
 
 Four moods run on their own:
 
