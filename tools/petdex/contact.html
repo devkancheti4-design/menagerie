@@ -20,7 +20,7 @@ const g=document.getElementById('g');
 PETS.forEach(([id,name])=>{
   const c=document.createElement('div');c.className='cell';
   const f=document.createElement('div');f.className='fr';
-  f.style.backgroundImage="url(out/"+id+"/spritesheet.png)";
+  f.style.backgroundImage="url(../../pets/"+id+"/spritesheet.png)";
   f.style.backgroundPosition=(-0*96)+"px "+(-ROW*104)+"px";
   c.appendChild(f);
   const n=document.createElement('div');n.className='n';n.textContent=name;c.appendChild(n);

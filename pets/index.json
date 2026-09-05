@@ -1,0 +1,417 @@
+{
+  "version": 1,
+  "name": "Menagerie pets",
+  "description": "Pixel companions exported from the Menagerie chat UI, in the Petdex sprite format.",
+  "license": "Apache-2.0",
+  "author": "devkancheti4-design",
+  "source": "https://github.com/devkancheti4-design/shiv1",
+  "spriteFormat": {
+    "frame": {
+      "width": 192,
+      "height": 208
+    },
+    "grid": {
+      "columns": 8,
+      "rows": 9
+    },
+    "states": [
+      {
+        "id": "idle",
+        "row": 0,
+        "frames": 6,
+        "durationMs": 1100
+      },
+      {
+        "id": "running-right",
+        "row": 1,
+        "frames": 8,
+        "durationMs": 1060
+      },
+      {
+        "id": "running-left",
+        "row": 2,
+        "frames": 8,
+        "durationMs": 1060
+      },
+      {
+        "id": "waving",
+        "row": 3,
+        "frames": 4,
+        "durationMs": 700
+      },
+      {
+        "id": "jumping",
+        "row": 4,
+        "frames": 5,
+        "durationMs": 840
+      },
+      {
+        "id": "failed",
+        "row": 5,
+        "frames": 8,
+        "durationMs": 1220
+      },
+      {
+        "id": "waiting",
+        "row": 6,
+        "frames": 6,
+        "durationMs": 1010
+      },
+      {
+        "id": "running",
+        "row": 7,
+        "frames": 6,
+        "durationMs": 820
+      },
+      {
+        "id": "review",
+        "row": 8,
+        "frames": 6,
+        "durationMs": 1030
+      }
+    ]
+  },
+  "count": 17,
+  "pets": [
+    {
+      "id": "barley",
+      "name": "Barley",
+      "kind": "bear",
+      "description": "A brown bear who takes up most of the desk and rumbles when pleased. Slow, warm, and unbothered by a red test run.",
+      "tags": [
+        "bear",
+        "brown",
+        "calm",
+        "laptop"
+      ],
+      "scale": 8,
+      "petJson": "barley/pet.json",
+      "spritesheet": "barley/spritesheet.png",
+      "zip": "barley/barley.zip",
+      "bytes": {
+        "spritesheet": 39384,
+        "zip": 15563
+      }
+    },
+    {
+      "id": "biscuit",
+      "name": "Biscuit",
+      "kind": "bunny",
+      "description": "A cream bunny with long pink-lined ears. Boings twice on the spot when something passes and folds its ears down when it doesn't.",
+      "tags": [
+        "bunny",
+        "cream",
+        "soft",
+        "laptop"
+      ],
+      "scale": 9,
+      "petJson": "biscuit/pet.json",
+      "spritesheet": "biscuit/spritesheet.png",
+      "zip": "biscuit/biscuit.zip",
+      "bytes": {
+        "spritesheet": 44126,
+        "zip": 17634
+      }
+    },
+    {
+      "id": "bolt",
+      "name": "Bolt",
+      "kind": "robot",
+      "description": "A boxy robot with a cyan visor and a small antenna. Glitches enthusiastically as a greeting, which it insists is intentional.",
+      "tags": [
+        "robot",
+        "retro",
+        "cyan",
+        "laptop"
+      ],
+      "scale": 9,
+      "petJson": "bolt/pet.json",
+      "spritesheet": "bolt/spritesheet.png",
+      "zip": "bolt/bolt.zip",
+      "bytes": {
+        "spritesheet": 43452,
+        "zip": 17697
+      }
+    },
+    {
+      "id": "chomp",
+      "name": "Chomp",
+      "kind": "shark",
+      "description": "A small shark who has never once been intimidated by a stack trace. Lunges and snaps when you say hello, sleeps with its teeth showing.",
+      "tags": [
+        "shark",
+        "ocean",
+        "bold",
+        "laptop"
+      ],
+      "scale": 9,
+      "petJson": "chomp/pet.json",
+      "spritesheet": "chomp/spritesheet.png",
+      "zip": "chomp/chomp.zip",
+      "bytes": {
+        "spritesheet": 43377,
+        "zip": 17973
+      }
+    },
+    {
+      "id": "dev",
+      "name": "Dev",
+      "kind": "human",
+      "description": "A person in a blue shirt, doing the same job as you, slightly more cheerfully. Leans in and waves when it wants to be noticed.",
+      "tags": [
+        "human",
+        "person",
+        "calm",
+        "laptop"
+      ],
+      "scale": 9,
+      "petJson": "dev/pet.json",
+      "spritesheet": "dev/spritesheet.png",
+      "zip": "dev/dev.zip",
+      "bytes": {
+        "spritesheet": 42446,
+        "zip": 17205
+      }
+    },
+    {
+      "id": "doze",
+      "name": "Doze",
+      "kind": "sloth",
+      "description": "Gets there. Takes a full second and a half to finish a stretch, sleeps at every opportunity, and reviews your diff with the unhurried confidence of someone who will not be rushed.",
+      "tags": [
+        "sloth",
+        "slow",
+        "calm",
+        "laptop"
+      ],
+      "scale": 9,
+      "petJson": "doze/pet.json",
+      "spritesheet": "doze/spritesheet.png",
+      "zip": "doze/doze.zip",
+      "bytes": {
+        "spritesheet": 43960,
+        "zip": 17241
+      }
+    },
+    {
+      "id": "ember",
+      "name": "Ember",
+      "kind": "dragon",
+      "description": "A pocket dragon who codes with the laptop in its lap. It dozes off when you stop typing, rears back and breathes fire when a run goes green, and braces itself when one doesn't.",
+      "tags": [
+        "dragon",
+        "fire",
+        "cozy",
+        "laptop"
+      ],
+      "scale": 9,
+      "petJson": "ember/pet.json",
+      "spritesheet": "ember/spritesheet.png",
+      "zip": "ember/ember.zip",
+      "bytes": {
+        "spritesheet": 46534,
+        "zip": 19686
+      }
+    },
+    {
+      "id": "mochi",
+      "name": "Mochi",
+      "kind": "cat",
+      "description": "A grey cat with whiskers that stick out past the frame. Crouches, then pounces, then goes straight back to sitting on the laptop.",
+      "tags": [
+        "cat",
+        "grey",
+        "quiet",
+        "laptop"
+      ],
+      "scale": 8,
+      "petJson": "mochi/pet.json",
+      "spritesheet": "mochi/spritesheet.png",
+      "zip": "mochi/mochi.zip",
+      "bytes": {
+        "spritesheet": 42013,
+        "zip": 17415
+      }
+    },
+    {
+      "id": "otto",
+      "name": "Otto",
+      "kind": "owl",
+      "description": "A brown owl with enormous eyes and two ear tufts, built for the hours you are actually working. Flaps and hoots, then goes back to staring.",
+      "tags": [
+        "owl",
+        "night",
+        "watchful",
+        "laptop"
+      ],
+      "scale": 9,
+      "petJson": "otto/pet.json",
+      "spritesheet": "otto/spritesheet.png",
+      "zip": "otto/otto.zip",
+      "bytes": {
+        "spritesheet": 46050,
+        "zip": 19638
+      }
+    },
+    {
+      "id": "pesto",
+      "name": "Pesto",
+      "kind": "frog",
+      "description": "A green frog whose eyes sit on top of its head, so it can watch the build and the door at the same time. Hops twice and ribbits when a run goes green.",
+      "tags": [
+        "frog",
+        "green",
+        "cheerful",
+        "laptop"
+      ],
+      "scale": 9,
+      "petJson": "pesto/pet.json",
+      "spritesheet": "pesto/spritesheet.png",
+      "zip": "pesto/pesto.zip",
+      "bytes": {
+        "spritesheet": 44911,
+        "zip": 17916
+      }
+    },
+    {
+      "id": "pinch",
+      "name": "Pinch",
+      "kind": "crab",
+      "description": "A red crab on eye stalks who only ever approaches a problem sideways. Scuttles across the desk clicking both claws, then settles back over the keyboard.",
+      "tags": [
+        "crab",
+        "ocean",
+        "sideways",
+        "laptop"
+      ],
+      "scale": 7,
+      "petJson": "pinch/pet.json",
+      "spritesheet": "pinch/spritesheet.png",
+      "zip": "pinch/pinch.zip",
+      "bytes": {
+        "spritesheet": 37101,
+        "zip": 15316
+      }
+    },
+    {
+      "id": "pip",
+      "name": "Pip",
+      "kind": "clawd",
+      "description": "A small round creature the colour of a sunrise, with three little points on its head. Rises up on its toes in a shower of stars when something finally works.",
+      "tags": [
+        "blob",
+        "warm",
+        "friendly",
+        "laptop"
+      ],
+      "scale": 8,
+      "petJson": "pip/pet.json",
+      "spritesheet": "pip/spritesheet.png",
+      "zip": "pip/pip.zip",
+      "bytes": {
+        "spritesheet": 41193,
+        "zip": 17388
+      }
+    },
+    {
+      "id": "rex",
+      "name": "Rex",
+      "kind": "dino",
+      "description": "A green dinosaur with two spikes and a mouthful of teeth, folded improbably behind a laptop. Celebrates by stomping hard enough to rattle the desk.",
+      "tags": [
+        "dinosaur",
+        "green",
+        "loud",
+        "laptop"
+      ],
+      "scale": 9,
+      "petJson": "rex/pet.json",
+      "spritesheet": "rex/spritesheet.png",
+      "zip": "rex/rex.zip",
+      "bytes": {
+        "spritesheet": 44773,
+        "zip": 18169
+      }
+    },
+    {
+      "id": "squish",
+      "name": "Squish",
+      "kind": "octopus",
+      "description": "Eight arms, one laptop, no clear division of labour. Wiggles all of them at once when it is pleased and blows bubbles while it thinks.",
+      "tags": [
+        "octopus",
+        "ocean",
+        "curious",
+        "laptop"
+      ],
+      "scale": 8,
+      "petJson": "squish/pet.json",
+      "spritesheet": "squish/spritesheet.png",
+      "zip": "squish/squish.zip",
+      "bytes": {
+        "spritesheet": 38883,
+        "zip": 16212
+      }
+    },
+    {
+      "id": "stripe",
+      "name": "Stripe",
+      "kind": "tiger",
+      "description": "An orange tiger with black stripes and a white muzzle. Spins on the spot when a run passes, and is asleep within twenty seconds of you walking away.",
+      "tags": [
+        "tiger",
+        "stripes",
+        "warm",
+        "laptop"
+      ],
+      "scale": 8,
+      "petJson": "stripe/pet.json",
+      "spritesheet": "stripe/spritesheet.png",
+      "zip": "stripe/stripe.zip",
+      "bytes": {
+        "spritesheet": 39581,
+        "zip": 15406
+      }
+    },
+    {
+      "id": "waddle",
+      "name": "Waddle",
+      "kind": "penguin",
+      "description": "A penguin in a permanent dinner jacket. Greets you with a belly slide, reviews your code standing very still, and naps upright like penguins do.",
+      "tags": [
+        "penguin",
+        "ice",
+        "tidy",
+        "laptop"
+      ],
+      "scale": 9,
+      "petJson": "waddle/pet.json",
+      "spritesheet": "waddle/spritesheet.png",
+      "zip": "waddle/waddle.zip",
+      "bytes": {
+        "spritesheet": 43151,
+        "zip": 16791
+      }
+    },
+    {
+      "id": "zoom",
+      "name": "Zoom",
+      "kind": "fox",
+      "description": "A fox with a white muzzle and no patience for slow builds. Bolts sideways in a blur of speed lines when it wants your attention.",
+      "tags": [
+        "fox",
+        "fast",
+        "clever",
+        "laptop"
+      ],
+      "scale": 7,
+      "petJson": "zoom/pet.json",
+      "spritesheet": "zoom/spritesheet.png",
+      "zip": "zoom/zoom.zip",
+      "bytes": {
+        "spritesheet": 36306,
+        "zip": 14666
+      }
+    }
+  ]
+}

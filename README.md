@@ -118,6 +118,49 @@ no server at all. That also means a key pasted into a copy of this page that
 other people can open is a key other people can use. Use one you can revoke, and
 there is a **Forget** button next to the field.
 
+## The pets, as an API
+
+Every animal is also exported as a [Petdex](https://petdex.dev) pet and
+committed under [`pets/`](pets/). GitHub Pages serves that directory with
+`access-control-allow-origin: *`, so it works as a read-only API from any
+origin, with no server and no key.
+
+```
+https://devkancheti4-design.github.io/shiv1/pets/index.json
+https://devkancheti4-design.github.io/shiv1/pets/<id>/pet.json
+https://devkancheti4-design.github.io/shiv1/pets/<id>/spritesheet.png
+https://devkancheti4-design.github.io/shiv1/pets/<id>/<id>.zip
+```
+
+`index.json` carries the roster and, once, the sprite format they all share:
+an 8 by 9 grid of 192 by 208 frames, one row per state, with the frame count
+and duration for each. Paths inside it are relative to the index itself, so
+the same file works from whichever host is serving it.
+
+```js
+const base = "https://devkancheti4-design.github.io/shiv1/pets/";
+const index = await fetch(base + "index.json").then(r => r.json());
+
+for (const pet of index.pets){
+  console.log(pet.id, pet.name, base + pet.spritesheet);
+}
+// barley Barley .../pets/barley/spritesheet.png
+// biscuit Biscuit .../pets/biscuit/spritesheet.png
+// ...
+```
+
+Seventeen pets: Ember, Chomp, Waddle, Squish, Zoom, Pinch, Doze, Pip, Rex,
+Stripe, Dev, Mochi, Pesto, Bolt, Otto, Biscuit and Barley. Each keeps its
+species' signature move as the `waving` state, so they are not recolours of
+one animal. Everything under `pets/` is generated, and one command rebuilds
+it:
+
+```sh
+node tools/petdex/build-pet.mjs index.html all
+```
+
+See [`tools/petdex/`](tools/petdex/) for how the sheets are rendered.
+
 ## How the animals are drawn
 
 Nobody is an image file. Every character is a 16×16 grid of letters, one letter

@@ -4,16 +4,18 @@ Turns any Menagerie animal into a [Petdex](https://petdex.dev) pet package:
 a `pet.json` and an 8x9 spritesheet of 192x208 frames, one row per state.
 
 ```sh
-node tools/petdex/build-pet.mjs index.html all      ./out   # every animal
-node tools/petdex/build-pet.mjs index.html dragon   ./out   # just one
+node tools/petdex/build-pet.mjs index.html all             # every animal
+node tools/petdex/build-pet.mjs index.html dragon          # just one
+node tools/petdex/build-pet.mjs index.html all ./somewhere # elsewhere
 ```
 
-Each run writes `out/<id>/pet.json`, `out/<id>/spritesheet.png`, and an
-`out/<id>.zip` ready to hand to `npx petdex submit` or drop at
-petdex.dev/submit. Names, descriptions and tags live in
-[`pets.json`](pets.json), keyed by species. Open [`contact.html`](contact.html)
-over a local server to flip through the whole roster one state at a time
-(`?row=0` through `?row=8`).
+Output goes to [`pets/`](../../pets) at the repo root by default: for each
+animal a `pet.json`, a `spritesheet.png`, and a `<id>.zip` ready to hand to
+`npx petdex submit` or drop at petdex.dev/submit. Building the whole roster
+also refreshes `pets/index.json`, which is what makes that directory readable
+as an API. Names, descriptions and tags live in
+[`pets.json`](pets.json), keyed by species. Open [`contact.html`](contact.html) over a local server to flip through the
+whole roster one state at a time (`?row=0` through `?row=8`).
 
 The sprite grids, palettes, poses and moves are read straight out of
 `index.html` at build time, so a pet is pixel-identical to the animal in the

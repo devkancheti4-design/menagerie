@@ -15,7 +15,7 @@ import { fileURLToPath } from "node:url";
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const APP = process.argv[2] || path.join(HERE, "../../index.html");
 const WANTED = process.argv[3] || "all";
-const OUT_DIR = process.argv[4] || path.join(HERE, "out");
+const OUT_DIR = process.argv[4] || path.join(HERE, "../../pets");
 const META = JSON.parse(readFileSync(path.join(HERE, "pets.json"), "utf8"));
 
 /* ---- 1. lift the sprite and animation sections out of the page ---- */
@@ -274,16 +274,48 @@ function buildOne(speciesId){
   mkdirSync(dir, { recursive: true });
   writeFileSync(path.join(dir, "spritesheet.png"), sheet);
   writeFileSync(path.join(dir, "pet.json"), petJson);
-  writeFileSync(path.join(OUT_DIR, meta.id + ".zip"),
-    zip([{ name: "pet.json", data: petJson }, { name: "spritesheet.png", data: sheet }]));
+  const archive = zip([{ name: "pet.json", data: petJson }, { name: "spritesheet.png", data: sheet }]);
+  writeFileSync(path.join(dir, meta.id + ".zip"), archive);
 
   const { ok, total } = paintedFrames(ctx);
-  return { id: meta.id, name: meta.name, species: speciesId, scale, ok, total, bytes: sheet.length };
+  return { id: meta.id, name: meta.name, species: speciesId, scale, ok, total,
+           bytes: sheet.length, manifest, zipBytes: archive.length };
 }
 
 mkdirSync(OUT_DIR, { recursive: true });
 const list = WANTED === "all" ? Object.keys(META) : [WANTED];
 const rows = list.map(buildOne);
+
+/* Building the whole roster also refreshes the index that makes this
+   directory readable as an API. Paths are relative to the index itself, so
+   the same file works from any host it is served from. */
+if (WANTED === "all"){
+  const index = {
+    version: 1,
+    name: "Menagerie pets",
+    description: "Pixel companions exported from the Menagerie chat UI, in the Petdex sprite format.",
+    license: "Apache-2.0",
+    author: "devkancheti4-design",
+    source: "https://github.com/devkancheti4-design/shiv1",
+    spriteFormat: {
+      frame: { width: FRAME_W, height: FRAME_H },
+      grid: { columns: COLS, rows: ROWS },
+      states: STATES.map((s, row) => ({ id: s.id, row, frames: s.frames, durationMs: s.ms }))
+    },
+    count: rows.length,
+    pets: rows.map(r => ({
+      id: r.id, name: r.name, kind: r.species,
+      description: r.manifest.description, tags: r.manifest.tags,
+      scale: r.scale,
+      petJson: `${r.id}/pet.json`,
+      spritesheet: `${r.id}/spritesheet.png`,
+      zip: `${r.id}/${r.id}.zip`,
+      bytes: { spritesheet: r.bytes, zip: r.zipBytes }
+    })).sort((a, b) => a.id.localeCompare(b.id))
+  };
+  writeFileSync(path.join(OUT_DIR, "index.json"), JSON.stringify(index, null, 2) + "\n");
+  console.log(`wrote index.json describing ${index.count} pets\n`);
+}
 console.log(`${rows.length} pet package(s) in ${OUT_DIR}\n`);
 console.log("id         name      species   scale  frames  sheet");
 for (const r of rows){
