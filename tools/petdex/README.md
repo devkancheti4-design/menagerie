@@ -4,8 +4,16 @@ Turns any Menagerie animal into a [Petdex](https://petdex.dev) pet package:
 a `pet.json` and an 8x9 spritesheet of 192x208 frames, one row per state.
 
 ```sh
-node tools/petdex/build-pet.mjs index.html dragon ./out
+node tools/petdex/build-pet.mjs index.html all      ./out   # every animal
+node tools/petdex/build-pet.mjs index.html dragon   ./out   # just one
 ```
+
+Each run writes `out/<id>/pet.json`, `out/<id>/spritesheet.png`, and an
+`out/<id>.zip` ready to hand to `npx petdex submit` or drop at
+petdex.dev/submit. Names, descriptions and tags live in
+[`pets.json`](pets.json), keyed by species. Open [`contact.html`](contact.html)
+over a local server to flip through the whole roster one state at a time
+(`?row=0` through `?row=8`).
 
 The sprite grids, palettes, poses and moves are read straight out of
 `index.html` at build time, so a pet is pixel-identical to the animal in the
@@ -38,4 +46,11 @@ every scale from 12 down to 5 and keeps the largest one where no frame clips
 the character. Decorative glyphs are measured separately and nudged back
 inside the frame instead of being sliced, so a star or a speed line never
 gets cut in half. The dragon fits at scale 9, a 144px character in a 192x208
-frame; a species with a wider move lands lower.
+frame. The fox and the crab travel further in their signature moves and land
+at scale 7.
+
+## No dependencies, including the zip
+
+`zlib` writes the PNG, and the zip is assembled by hand from the same deflate
+and CRC-32 the PNG already needs. Nothing is installed and nothing is shelled
+out to, so the exporter runs the same on any machine with Node.
