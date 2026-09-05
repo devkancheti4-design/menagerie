@@ -173,6 +173,32 @@ main.chat{flex:1 1 auto;display:flex;flex-direction:column;min-width:0;min-heigh
 @keyframes blink{50%{opacity:0}}
 
 .empty{text-align:center;color:var(--ink-3);padding:40px 20px 10px;font-size:14px;line-height:1.75}
+.connect{
+  border:1px solid var(--line);background:var(--panel);border-radius:16px;
+  padding:20px 20px 18px;margin:24px auto 6px;max-width:560px;box-shadow:var(--shadow);
+}
+.connect h3{margin:0 0 4px;font-size:16px;letter-spacing:-.01em}
+.connect .sub{color:var(--ink-3);font-size:13px;line-height:1.6;margin:0 0 14px}
+.connect .lab{
+  font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3);
+  font-family:var(--mono);margin:14px 0 7px;display:flex;align-items:center;gap:8px;
+}
+.connect .lab::after{content:"";flex:1 1 auto;height:1px;background:var(--line)}
+.presets{display:flex;flex-wrap:wrap;gap:6px}
+.presets button{
+  border:1px solid var(--line-2);background:var(--panel-2);border-radius:10px;
+  padding:9px 13px;cursor:pointer;font-size:13px;display:inline-flex;align-items:center;gap:7px;
+}
+.presets button:hover{border-color:var(--accent);background:var(--accent-soft)}
+.presets button .tag{font-size:10px;color:var(--ink-3);font-family:var(--mono)}
+.presets button.found{border-color:var(--ok);background:color-mix(in srgb, var(--ok) 12%, var(--panel-2))}
+.connect .urlrow{display:flex;gap:6px;margin-top:2px}
+.connect .urlrow input{
+  flex:1 1 auto;min-width:0;border:1px solid var(--line-2);border-radius:10px;
+  background:var(--panel-2);padding:9px 11px;font-size:13px;
+}
+.connect .urlrow input:focus{outline:2px solid var(--accent);outline-offset:-1px;border-color:var(--accent)}
+.connect .note{font-size:11.5px;color:var(--ink-3);margin-top:12px;line-height:1.6}
 .starters{display:flex;flex-wrap:wrap;gap:7px;justify-content:center;margin-top:16px}
 .starter{
   border:1px solid var(--line-2);background:var(--panel);border-radius:99px;
@@ -533,7 +559,7 @@ const PROPS = {
     "................","................","................","................",
     "................","................","...GGGGG.GGGGG..","....KWK...KWK..."] },
   headphones:{ label:"headphones", px:[
-    "....KKKKKKKK....","..KKK......KKK..",".KKK........KKK.",".KKR........RKK.",
+    "....KWKKKKKK....","..KKK......KKK..",".KKK........KKK.",".KKR........RKK.",
     ".KKR........RKK.",".KKR........RKK.",".KKK........KKK.","................",
     "................","................","................","................",
     "................","................","................","................"] },
@@ -543,20 +569,20 @@ const PROPS = {
     "................","................","................","................",
     "................","................","................","................"] },
   party:{ label:"party hat", px:[
-    ".........WW.....","........ORRO....",".......ORYYRO...","......ORYRRYRO..",
+    "..........WW....",".........ORRO...","........ORYYRO..",".......ORRYYRRO.",
     "................","................","................","................",
     "................","................","................","................",
     "................","................","................","................"] },
   coffee:{ label:"coffee", px:[
     "................","................","................","................",
     "................","................","................","................",
-    "................","...........G....","..........OOOO..","..........ONNO..",
-    "..........OWWO..","..........OOOO..","................","................"] },
+    "...........G.G..","..........OOOOO.","..........ONNNO.","..........OWWWO.",
+    "..........OWWWO.","..........OOOOO.","................","................"] },
   scarf:{ label:"scarf", px:[
     "................","................","................","................",
     "................","................","................","................",
-    "................","...RRRRRRRRRR...","...RRRRRRRRRR...","..........RR....",
-    "..........RR....","...........R....","................","................"] }
+    "................","...RRRRRRRRRR...","...RYYRRYYRRR...","..........RRR...",
+    "..........RRR...","..........R.R...","................","................"] }
 };
 const PROP_PAL = { K:"#2b2d36", G:"#8b909c", W:"#f4f6fa", C:"#a9e0f5",
                    R:"#d8553f", Y:"#f0c04a", N:"#6b4326", O:"#1b1d24" };
@@ -823,14 +849,47 @@ function tone(o){
   if (!c) return;
   const t0 = c.currentTime + (o.t || 0), d = o.d || 0.2;
   const osc = c.createOscillator(), g = c.createGain();
+  /* a bandpass throws away everything off resonance, so a voice with a
+     formant lands far quieter than a raw oscillator at the same gain.
+     Give it back roughly what the filter takes. */
+  const peak = (o.g == null ? 0.12 : o.g) * (o.bp ? Math.min(4, 1 + (o.q || 1.2) * 0.85) : 1);
   osc.type = o.type || "sine";
   osc.frequency.setValueAtTime(o.f, t0);
   if (o.f2) osc.frequency.exponentialRampToValueAtTime(Math.max(20, o.f2), t0 + d);
+  if (o.f3) osc.frequency.exponentialRampToValueAtTime(Math.max(20, o.f3), t0 + d * 2);
   g.gain.setValueAtTime(0.0001, t0);
-  g.gain.linearRampToValueAtTime(o.g == null ? 0.12 : o.g, t0 + Math.min(0.02, d / 3));
+  g.gain.linearRampToValueAtTime(peak, t0 + Math.min(o.atk == null ? 0.02 : o.atk, d / 3));
   g.gain.exponentialRampToValueAtTime(0.0001, t0 + d);
-  osc.connect(g); g.connect(master);
+  /* a vocal tract, roughly: one resonant peak is enough to turn a
+     sawtooth into something with a throat behind it */
+  let tail = osc;
+  if (o.bp){
+    const bp = c.createBiquadFilter();
+    bp.type = "bandpass"; bp.frequency.value = o.bp; bp.Q.value = o.q || 1.2;
+    osc.connect(bp); tail = bp;
+  }
+  /* and a wobble in the gain, which is what makes a growl a growl */
+  if (o.am){
+    const lfo = c.createOscillator(), depth = c.createGain();
+    lfo.type = "sine"; lfo.frequency.value = o.am;
+    depth.gain.value = peak * (o.amDepth || 0.4);
+    lfo.connect(depth); depth.connect(g.gain);
+    lfo.start(t0); lfo.stop(t0 + d + 0.05);
+  }
+  tail.connect(g); g.connect(master);
   osc.start(t0); osc.stop(t0 + d + 0.03);
+}
+
+/* A shout: pitch arcs up then collapses, a throat resonance on top, a
+   growl in the gain, and breath underneath. */
+function roar(o){
+  const f = o.f, d = o.d || 0.75, g = o.g == null ? 0.17 : o.g, t = o.t || 0;
+  tone({ f: f * 0.75, f2: f * 1.2, d: d * 0.3, type:"sawtooth", g: g,
+         bp: o.bp || 620, q: 1.1, am: o.rough || 26, amDepth: 0.45, atk: 0.05, t: t });
+  tone({ f: f * 1.2, f2: f * 0.55, d: d * 0.8, type:"sawtooth", g: g * 0.95,
+         bp: (o.bp || 620) * 0.8, q: 1.4, am: (o.rough || 26) * 0.7, amDepth: 0.5, t: t + d * 0.28 });
+  noise({ f: (o.bp || 620) * 1.6, f2: (o.bp || 620) * 0.5, d: d, type:"bandpass",
+          g: g * 0.45, q: 0.7, t: t });
 }
 
 /* filtered noise - whooshes, thuds, clicks, wingbeats */
@@ -896,15 +955,66 @@ const SFX = {
                    noise({ f:220, f2:90, d:0.5, type:"lowpass", g:0.10 }); }
 };
 
+/* One voice per animal. A move still supplies its motion noise, but what
+   you hear first is the creature: the dinosaur shouts, the cat complains,
+   the owl asks a question and does not wait for an answer. */
+const VOICES = {
+  dino:    () => { roar({ f: 118, d: 0.95, g: 0.19, bp: 520, rough: 20 });
+                   noise({ f: 260, f2: 90, d: 0.3, type:"lowpass", g: 0.12, t: 0.75 }); },
+  dragon:  () => { roar({ f: 96, d: 0.9, g: 0.18, bp: 460, rough: 17 });
+                   noise({ f: 700, f2: 2800, d: 0.5, type:"bandpass", g: 0.15, q: 0.7, t: 0.42 }); },
+  tiger:   () => { roar({ f: 150, d: 0.8, g: 0.17, bp: 780, rough: 30 }); },
+  bear:    () => { roar({ f: 84,  d: 0.85, g: 0.17, bp: 380, rough: 15 }); },
+  shark:   () => { noise({ f: 1900, f2: 380, d: 0.17, type:"highpass", g: 0.17 });
+                   tone({ f: 190, f2: 55, d: 0.12, type:"sawtooth", g: 0.16, t: 0.14 });
+                   noise({ f: 2700, d: 0.05, type:"bandpass", g: 0.24, q: 5, t: 0.16 }); },
+  cat:     () => { tone({ f: 520, f2: 880, d: 0.17, type:"sawtooth", g: 0.11, bp: 1150, q: 2 });
+                   tone({ f: 880, f2: 430, d: 0.36, type:"sawtooth", g: 0.12, bp: 950, q: 2, t: 0.16 }); },
+  frog:    () => { [0, 0.24].forEach(t => {
+                     tone({ f: 150, f2: 235, d: 0.09, type:"sawtooth", g: 0.14, bp: 420, q: 3, t: t });
+                     tone({ f: 235, f2: 140, d: 0.11, type:"sawtooth", g: 0.14, bp: 380, q: 3, t: t + 0.09 }); }); },
+  owl:     () => { [0, 0.42].forEach((t, i) => {
+                     tone({ f: 412, f2: 386, d: 0.34, type:"sine", g: 0.20 - i * 0.03,
+                            bp: 900, q: 2, am: 5.5, amDepth: 0.2, atk: 0.09, t: t }); }); },
+  penguin: () => { [0, 0.2, 0.4].forEach(t =>
+                     tone({ f: 420, f2: 300, d: 0.15, type:"sawtooth", g: 0.12,
+                            bp: 1500, q: 2.5, am: 34, amDepth: 0.6, t: t })); },
+  fox:     () => { [0, 0.17].forEach(t =>
+                     tone({ f: 900, f2: 1500, d: 0.11, type:"square", g: 0.13, bp: 2000, q: 2, t: t }));
+                   tone({ f: 1500, f2: 700, d: 0.3, type:"sawtooth", g: 0.13, bp: 1800, q: 2, t: 0.36 }); },
+  bunny:   () => { tone({ f: 900, f2: 1450, d: 0.09, type:"sine", g: 0.17, bp: 2200, q: 2 });
+                   noise({ f: 180, f2: 70, d: 0.14, type:"lowpass", g: 0.24, t: 0.22 });
+                   noise({ f: 180, f2: 70, d: 0.14, type:"lowpass", g: 0.19, t: 0.42 }); },
+  sloth:   () => { tone({ f: 620, f2: 980, d: 0.5, type:"sine", g: 0.10, bp: 1600, q: 2.5, atk: 0.18 });
+                   tone({ f: 980, f2: 520, d: 0.7, type:"sine", g: 0.09, bp: 1300, q: 2.5, t: 0.5 }); },
+  octopus: () => { for (let i = 0; i < 5; i++)
+                     tone({ f: 380 + i * 95, f2: 880 + i * 95, d: 0.09, type:"sine", g: 0.17, t: i * 0.14 }); },
+  crab:    () => { for (let i = 0; i < 7; i++){
+                     noise({ f: 2100 + i * 140, d: 0.05, type:"bandpass", g: 0.36, q: 2.2, t: i * 0.09 });
+                     tone({ f: 1500 + i * 90, d: 0.02, type:"square", g: 0.08, t: i * 0.09 }); } },
+  robot:   () => { for (let i = 0; i < 6; i++) tone({ f: 900 - i * 115, d: 0.05, type:"square", g: 0.15, t: i * 0.07 });
+                   noise({ f: 1800, d: 0.1, type:"bandpass", g: 0.17, q: 8, t: 0.44 }); },
+  human:   () => { tone({ f: 300, f2: 460, d: 0.14, type:"sawtooth", g: 0.10, bp: 1000, q: 2.5 });
+                   tone({ f: 460, f2: 330, d: 0.24, type:"sawtooth", g: 0.10, bp: 800, q: 2.5, t: 0.13 }); },
+  clawd:   () => { [523, 784, 1047].forEach((f, i) =>
+                     tone({ f: f, f2: f * 1.35, d: 0.13, type:"triangle", g: 0.17, t: i * 0.1 })); }
+};
+
 /* the two moods that react to what the model did */
 const sfxDone = () => { tone({ f:660, d:0.12, type:"triangle", g:0.09 });
                         tone({ f:990, d:0.22, type:"triangle", g:0.09, t:0.10 }); };
 const sfxFail = () => { tone({ f:200, f2:120, d:0.20, type:"square", g:0.10 });
                         tone({ f:150, f2:90,  d:0.28, type:"square", g:0.09, t:0.16 }); };
 
-function playMove(sp){
-  const fn = SFX[sp.sound || sp.move];
-  if (fn) try { fn(); } catch (e) {}
+function playMove(sp, speciesId){
+  const voice = VOICES[speciesId];
+  const motion = SFX[sp.sound || sp.move];
+  try {
+    if (voice) voice();
+    /* keep the movement audible under the voice, quietly, unless the
+       voice already is the movement */
+    else if (motion) motion();
+  } catch (e) {}
 }
 
 /* ---------------------------------------------------------------------
@@ -1141,6 +1251,64 @@ const PROVIDERS = {
   }
 };
 
+/* One click each. Everything local needs nothing but the app running;
+   everything hosted needs a key and nothing else. */
+const PRESETS = [
+  { id:"ollama",     label:"Ollama",     kind:"ollama",    base:"http://localhost:11434",       local:true },
+  { id:"lmstudio",   label:"LM Studio",  kind:"openai",    base:"http://localhost:1234/v1",     local:true },
+  { id:"llamacpp",   label:"llama.cpp",  kind:"openai",    base:"http://localhost:8080/v1",     local:true },
+  { id:"vllm",       label:"vLLM",       kind:"openai",    base:"http://localhost:8000/v1",     local:true },
+  { id:"jan",        label:"Jan",        kind:"openai",    base:"http://localhost:1337/v1",     local:true },
+  { id:"anthropic",  label:"Anthropic",  kind:"anthropic", base:"https://api.anthropic.com",    key:true },
+  { id:"openai",     label:"OpenAI",     kind:"openai",    base:"https://api.openai.com/v1",    key:true },
+  { id:"openrouter", label:"OpenRouter", kind:"openai",    base:"https://openrouter.ai/api/v1", key:true },
+  { id:"groq",       label:"Groq",       kind:"openai",    base:"https://api.groq.com/openai/v1", key:true },
+  { id:"together",   label:"Together",   kind:"openai",    base:"https://api.together.xyz/v1",  key:true }
+];
+
+function withTimeout(ms){
+  const ac = new AbortController();
+  setTimeout(() => ac.abort(), ms);
+  return ac.signal;
+}
+
+/* Work out what is actually listening at a URL, so pasting one is enough.
+   Tries the Ollama shape, then the OpenAI shape at the URL given and at
+   /v1 under it. */
+async function sniff(base, key, ms){
+  const clean = String(base || "").trim().replace(/\/+$/, "");
+  if (!clean) return null;
+  const attempts = [
+    { kind:"ollama", url: clean + "/api/tags", base: clean },
+    { kind:"openai", url: clean + "/models",   base: clean },
+    { kind:"openai", url: clean + "/v1/models", base: clean + "/v1" }
+  ];
+  for (const a of attempts){
+    try {
+      const h = {};
+      if (key) h.authorization = "Bearer " + key;
+      const r = await fetch(a.url, { headers: h, signal: withTimeout(ms || 2500) });
+      if (!r.ok) continue;
+      const j = await r.json();
+      if (a.kind === "ollama" && Array.isArray(j.models))
+        return { kind:"ollama", base: a.base, models: j.models.map(m => m.name) };
+      if (a.kind === "openai" && Array.isArray(j.data))
+        return { kind:"openai", base: a.base, models: j.data.map(m => m.id) };
+    } catch (e) { /* next */ }
+  }
+  return null;
+}
+
+/* Knock on every local port we know about at once. */
+async function scanLocal(){
+  const locals = PRESETS.filter(p => p.local);
+  const hits = await Promise.all(locals.map(async p => {
+    const found = await sniff(p.base, "", 1800);
+    return found ? { preset: p, found: found } : null;
+  }));
+  return hits.find(Boolean) || null;
+}
+
 /* What went wrong, in words someone can act on. */
 function diagnose(err, cfg){
   const p = cfg.provider;
@@ -1296,7 +1464,7 @@ function signature(){
   const sp = SPECIES[pet.species] || SPECIES.clawd;
   poke();
   setMood(sp.move);
-  playMove(sp);
+  playMove(sp, pet.species);
   popEl.textContent = sp.cry + "!";
   popEl.classList.add("on");
   clearTimeout(signature._t);
@@ -1445,10 +1613,109 @@ function atBottom(){
 }
 function pinBottom(){ scrollEl.scrollTop = scrollEl.scrollHeight; }
 
+let connected = false;
+
+function applyPreset(p){
+  cfg.provider = p.kind;
+  cfg.base = p.base;
+  cfg.model = "";
+  save();
+  return probe().then(list => {
+    if (list && list.length){
+      toast("Connected to " + p.label);
+      renderMsgs(); screenIdle();
+      return true;
+    }
+    /* hosted services will not answer without a key, which is not a fault */
+    if (p.key && !apiKey){
+      toast(p.label + " needs an API key");
+      openSettings(true);
+      return false;
+    }
+    toast("No answer from " + p.label);
+    renderMsgs();
+    return false;
+  });
+}
+
+/* The card someone lands on when nothing is connected yet. */
+function connectCard(){
+  const box = el("div", "connect");
+  box.appendChild(el("h3", null, "Connect a model"));
+  box.appendChild(el("p", "sub",
+    "This is just the interface. Point it at whatever you already run, or at a hosted API with your own key. Nothing is stored anywhere but this browser."));
+
+  box.appendChild(el("div", "lab", "On this machine"));
+  const localRow = el("div", "presets");
+  PRESETS.filter(p => p.local).forEach(p => {
+    const b = el("button", null, p.label);
+    b.type = "button";
+    b.appendChild(el("span", "tag", p.base.replace("http://localhost", ":")));
+    b.addEventListener("click", () => applyPreset(p));
+    localRow.appendChild(b);
+  });
+  box.appendChild(localRow);
+
+  box.appendChild(el("div", "lab", "Hosted, with your key"));
+  const hostRow = el("div", "presets");
+  PRESETS.filter(p => p.key).forEach(p => {
+    const b = el("button", null, p.label);
+    b.type = "button";
+    b.addEventListener("click", () => applyPreset(p));
+    hostRow.appendChild(b);
+  });
+  box.appendChild(hostRow);
+
+  box.appendChild(el("div", "lab", "Or point it anywhere"));
+  const row = el("div", "urlrow");
+  const inp = el("input");
+  inp.placeholder = "http://localhost:11434 or https://your-server/v1";
+  inp.spellcheck = false;
+  const go = el("button", "btn primary", "Connect");
+  go.type = "button";
+  const tryUrl = async () => {
+    const url = inp.value.trim();
+    if (!url) return;
+    go.textContent = "Looking...";
+    const found = await sniff(url, apiKey, 4000);
+    go.textContent = "Connect";
+    if (!found){ toast("Nothing answered at that URL"); return; }
+    cfg.provider = found.kind; cfg.base = found.base; cfg.model = "";
+    save();
+    await probe();
+    toast("Found a " + (found.kind === "ollama" ? "Ollama" : "OpenAI-compatible") + " server");
+    renderMsgs(); screenIdle();
+  };
+  go.addEventListener("click", tryUrl);
+  inp.addEventListener("keydown", e => { if (e.key === "Enter"){ e.preventDefault(); tryUrl(); } });
+  row.appendChild(inp); row.appendChild(go);
+  box.appendChild(row);
+
+  const scan = el("button", "btn", "Scan this machine");
+  scan.type = "button";
+  scan.style.marginTop = "12px";
+  scan.addEventListener("click", async () => {
+    scan.textContent = "Scanning...";
+    const hit = await scanLocal();
+    scan.textContent = "Scan this machine";
+    if (!hit){ toast("Nothing listening on the usual ports"); return; }
+    applyPreset(hit.preset);
+  });
+  box.appendChild(scan);
+
+  box.appendChild(el("div", "note",
+    "Ollama only accepts requests from localhost origins. If this page is open from a file or from the web, serve it locally with `python3 -m http.server 8765`, or start Ollama with OLLAMA_ORIGINS='*'."));
+  return box;
+}
+
 function renderMsgs(){
   msgsEl.textContent = "";
   liveBubble = null;
   if (!convo.length){
+    if (!connected){
+      msgsEl.appendChild(connectCard());
+      return;
+    }
     const e = el("div", "empty");
     e.appendChild(el("div", null, "Nobody has said anything yet."));
     e.appendChild(el("div", null, "Ask for something and watch the den."));
@@ -1670,10 +1937,13 @@ async function probe(quiet){
   try {
     const list = await p.models(cfgNow());
     if (!cfg.model || list.indexOf(cfg.model) < 0) cfg.model = pickDefaultModel(list) || cfg.model;
-    setStatus(p.label + (cfg.model ? " - " + cfg.model : ""), cfg.provider === "demo" ? "demo" : "on");
+    connected = cfg.provider !== "demo";
+    setStatus(connected ? p.label + (cfg.model ? " - " + cfg.model : "") : "Not connected",
+              connected ? "on" : "demo");
     save();
     return list;
   } catch (e){
+    connected = false;
     setStatus(p.label + " unreachable", "off");
     return null;
   }
@@ -1708,6 +1978,17 @@ function buildSettings(){
     seg.appendChild(b);
   });
   f0.appendChild(seg);
+  const quick = el("div", "presets");
+  quick.style.marginTop = "8px";
+  PRESETS.forEach(pr => {
+    const b = el("button", null, pr.label);
+    b.type = "button";
+    b.style.fontSize = "12px"; b.style.padding = "6px 10px";
+    if (cfg.base === pr.base) b.classList.add("found");
+    b.addEventListener("click", async () => { await applyPreset(pr); buildSettings(); });
+    quick.appendChild(b);
+  });
+  f0.appendChild(quick);
   f0.appendChild(el("div", "note", p.hint));
   host.appendChild(f0);
 
@@ -1840,6 +2121,7 @@ $("#setBtn").addEventListener("click", () => openSettings(true));
 $("#setClose").addEventListener("click", () => openSettings(false));
 $("#scrim").addEventListener("click", () => { openSettings(false); denDrawer(false); });
 $("#statusPill").addEventListener("click", () => openSettings(true));
+$("#statusPill").title = "Where replies come from. Click to change.";
 
 function denDrawer(on){
   $("#den").classList.toggle("on", on);
@@ -1865,7 +2147,7 @@ $("#soundBtn").addEventListener("click", () => {
   soundOn = !soundOn;
   try { localStorage.setItem(SOUNDKEY, soundOn ? "1" : "0"); } catch (e) {}
   paintSound();
-  if (soundOn) playMove(SPECIES[pet.species] || SPECIES.clawd);
+  if (soundOn) playMove(SPECIES[pet.species] || SPECIES.clawd, pet.species);
   toast(soundOn ? "Sound on" : "Sound off");
 });
 
@@ -1914,14 +2196,19 @@ function load(){
 }
 
 async function firstRunDetect(){
-  for (const p of ["ollama", "openai"]){
-    cfg.provider = p; cfg.base = PROVIDERS[p].base;
-    const list = await probe(true);
-    if (list && list.length){ save(); return; }
+  const hit = await scanLocal();
+  if (hit){
+    cfg.provider = hit.preset.kind;
+    cfg.base = hit.preset.base;
+    cfg.model = "";
+    await probe(true);
+    save();
+    return;
   }
   cfg.provider = "demo"; cfg.base = ""; cfg.model = "scripted";
+  connected = false;
   save();
-  setStatus("Demo - no model attached", "demo");
+  setStatus("Not connected", "demo");
 }
 
 async function boot(){
@@ -1931,6 +2218,7 @@ async function boot(){
   sizeStage(); screenIdle(); grow();
   requestAnimationFrame(loop);
   if (had) await probe(); else await firstRunDetect();
+  renderMsgs();
   screenIdle();
 }
 boot();

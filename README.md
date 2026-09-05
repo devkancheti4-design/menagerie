@@ -21,16 +21,18 @@ Download either one, double-click it, and it works.
 **1. Open it.** Click the link above, or download `index.html` and double-click
 it. There is nothing to install and no account.
 
-**2. Point it at a model.** Open **Settings** (the ⚙ in the top right). On first
-run it looks for Ollama, then LM Studio, and falls back to a scripted demo so the
-page works with nothing installed.
+**2. Point it at a model.** On first run it knocks on every local port it knows
+about at once and connects to whatever answers. If nothing does, you get a
+**Connect a model** card with one button per provider:
 
-| If you run | Set provider to | Base URL |
-|---|---|---|
-| `ollama serve` | Ollama | `http://localhost:11434` |
-| LM Studio, llama.cpp, vLLM, LocalAI | OpenAI-ish | `http://localhost:1234/v1` |
-| OpenRouter, OpenAI, Groq | OpenAI-ish | that service's `/v1` URL + your key |
-| Anthropic | Anthropic | `https://api.anthropic.com` + your key |
+- **On this machine**: Ollama, LM Studio, llama.cpp, vLLM, Jan.
+- **Hosted, with your key**: Anthropic, OpenAI, OpenRouter, Groq, Together.
+- **Or point it anywhere**: paste any base URL. It works out for itself whether
+  the thing on the other end speaks Ollama or OpenAI, and whether the models
+  live at the URL you gave or one level down at `/v1`.
+
+There is also a **Scan this machine** button if you started something after the
+page loaded. The same buttons live in Settings.
 
 Hit **List** to pull the available models, or type a model name yourself. **Test
 the connection** tells you whether it answered.
@@ -72,10 +74,13 @@ The penguin belly-slides. The dragon rears back and breathes fire. The crab
 scuttles sideways in a cloud of bubbles, the octopus wiggles all eight, the fox
 leaves speed lines, and the sloth takes a very long time to stretch.
 
-Every move has a voice, synthesised on the spot with the Web Audio API. No
-audio files to download. The shark's whoosh-and-snap, the dragon's roar over
-crackling flame, the crab's seven clicks, the sloth's long yawn, the frog's
-two-note ribbit. **♪** in the header mutes the lot, and the setting sticks.
+Every animal has its own voice, synthesised on the spot with the Web Audio API.
+No audio files to download. The dinosaur shouts, the tiger and the bear growl
+underneath it, the cat complains on the way up and the way down, the owl asks
+twice and does not wait for an answer, the fox yips, the penguin brays, the
+frog gets two notes and the crab gets seven clicks. A roar is a pitch arc with
+a throat resonance over it and a wobble in the gain, which is the difference
+between a growl and a beep. **♪** in the header mutes the lot, and it sticks.
 
 Four moods run on their own:
 
@@ -223,6 +228,9 @@ See [`tools/petdex/`](tools/petdex/) for how the sheets are rendered.
 - Streaming is parsed by hand for all three wire formats: Ollama's NDJSON, SSE
   from OpenAI-compatible servers, and Anthropic's typed events. **Stop**
   aborts mid-flight and keeps what already arrived.
+- Connecting is a guess-and-check, not a form to fill in: the page probes the
+  known local ports in parallel, and a pasted URL is sniffed for which protocol
+  it speaks before anything is saved.
 - Failures explain themselves. A refused connection to Ollama tells you about
   origins and gives you the command; a 401 says the key was rejected.
 - The markdown renderer escapes first and builds nodes second, so a model that
