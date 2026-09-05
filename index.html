@@ -717,7 +717,10 @@ function scatter(n, i){
   return { x: (a - Math.floor(a)) * 18 - 1, y: (b - Math.floor(b)) * 9 - 2 };
 }
 
-const FIELD = 22, ORIGIN_X = 3, ORIGIN_Y = 5;
+/* The stage is wider than it is tall, because answering means skating
+   across it. ORIGIN_X centres the 16-cell character in that width. */
+const FIELD_W = 30, FIELD_H = 22, ORIGIN_X = 7, ORIGIN_Y = 5;
+const TRAVEL = 5.5;   // cells either side of centre
 
 /* Returns {pose, marks:[{g,x,y,a}]} for a mood at t seconds in. */
 function frameFor(mood, t, sp){
@@ -738,6 +741,26 @@ function frameFor(mood, t, sp){
     const nod = S(t * 2.1) > 0.75 ? -1 : 0;
     if (S(t * 3.1) > 0.93) marks.push({ g:"spark", x: 12, y: 9, a: 0.9 });
     return { pose:{ hy: nod - (tick ? 0 : 1), by: tick ? 0 : -1, shear: 0 }, marks };
+  }
+  if (mood === "skate"){
+    /* the same typing bob, carried across the stage on wheels. travel is
+       in fractional cells so the glide lands on whole pixels, not cells. */
+    const glide = t * 1.5;
+    const travel = S(glide) * TRAVEL;
+    const vel = C(glide);                       // + moving right, - moving left
+    const tick = Math.floor(t * 10) % 2;
+    const nod = S(t * 2.1) > 0.75 ? -1 : 0;
+    const behind = vel > 0 ? -3 : 17;
+    const speed = Math.min(1, Math.abs(vel) * 1.6);
+    if (speed > 0.25){
+      marks.push({ g:"dash", x: behind, y: 7, a: speed * 0.7 });
+      marks.push({ g:"dash", x: behind + (vel > 0 ? -1 : 1), y: 10, a: speed * 0.45 });
+    }
+    if (S(t * 3.1) > 0.93) marks.push({ g:"spark", x: 12, y: 9, a: 0.9 });
+    return {
+      pose:{ hy: nod - (tick ? 0 : 1), by: tick ? 0 : -1, shear: R(vel * 2), travel: travel },
+      marks
+    };
   }
   if (mood === "happy"){
     const u = (t * 2.3) % 1, h = bump(u);
@@ -1215,24 +1238,26 @@ function poke(){
   lastPoke = Date.now();
   if (base === "sleep" && !busy){ setBase("idle"); screenIdle(); }
 }
-const STATUS = { sleep:"asleep", idle:"waiting", work:"working", happy:"nailed it", fight:"that went badly" };
+const STATUS = { sleep:"asleep", idle:"waiting", work:"working", skate:"working on it",
+                 happy:"nailed it", fight:"that went badly" };
 function paintStatus(){
   statusLine.textContent = STATUS[mood] || ((SPECIES[pet.species] || SPECIES.clawd).cry.toLowerCase() + "!");
   statusLine.className = "status" +
-    (mood === "work" ? " work" : mood === "happy" ? " happy" : mood === "fight" ? " fight" : "");
+    (mood === "work" || mood === "skate" ? " work"
+      : mood === "happy" ? " happy" : mood === "fight" ? " fight" : "");
 }
 
 const reduced = window.matchMedia("(prefers-reduced-motion: reduce)");
 let stageScale = 8;
 function sizeStage(){
   const box = $("#stage").getBoundingClientRect();
-  const s = Math.max(4, Math.min(14, Math.floor(Math.min(box.width, box.height) / FIELD)));
+  const s = Math.max(4, Math.min(14, Math.floor(Math.min(box.width / FIELD_W, box.height / FIELD_H))));
   stageScale = s;
   const dpr = Math.max(1, Math.min(3, Math.round(window.devicePixelRatio || 1)));
-  stageCv.width = FIELD * s * dpr;
-  stageCv.height = FIELD * s * dpr;
-  stageCv.style.width = (FIELD * s) + "px";
-  stageCv.style.height = (FIELD * s) + "px";
+  stageCv.width = FIELD_W * s * dpr;
+  stageCv.height = FIELD_H * s * dpr;
+  stageCv.style.width = (FIELD_W * s) + "px";
+  stageCv.style.height = (FIELD_H * s) + "px";
   const ctx = stageCv.getContext("2d");
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   ctx.imageSmoothingEnabled = false;
@@ -1244,9 +1269,15 @@ function paintStage(){
   let t = (performance.now() - moodStart) / 1000;
   if (reduced.matches && MOVES[mood]) t = MOVES[mood].d * 0.45;
   const f = frameFor(mood, t, sp);
-  ctx.clearRect(0, 0, FIELD * stageScale, FIELD * stageScale);
-  paintMember(ctx, pet, stageScale, ORIGIN_X, ORIGIN_Y, f.pose);
-  f.marks.forEach(m => drawGlyph(ctx, m.g, stageScale, ORIGIN_X + m.x, ORIGIN_Y + m.y, m.a));
+  ctx.clearRect(0, 0, FIELD_W * stageScale, FIELD_H * stageScale);
+  /* travel is a fractional cell offset, so the glide moves in whole pixels
+     rather than jumping a cell at a time */
+  const ox = ORIGIN_X + (f.pose.travel || 0);
+  const rider = mood === "skate" && (pet.acc || []).indexOf("skates") < 0
+    ? { species: pet.species, hue: pet.hue, acc: (pet.acc || []).concat("skates") }
+    : pet;
+  paintMember(ctx, rider, stageScale, ox, ORIGIN_Y, f.pose);
+  f.marks.forEach(m => drawGlyph(ctx, m.g, stageScale, ox + m.x, ORIGIN_Y + m.y, m.a));
   paintStatus();
 }
 function loop(){
@@ -1517,7 +1548,7 @@ async function send(){
   busy = true;
   current = new AbortController();
   setSendState();
-  setBase("work"); setMood("work");
+  setBase("skate"); setMood("skate");
   screenReset(text);
 
   const t0 = Date.now();
